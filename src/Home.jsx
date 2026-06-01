@@ -1,3 +1,5 @@
+import { useNavigate } from "react-router-dom";
+
 const items = [
     { id: 1, title: "Ví tiền màu nâu", district: "Quận 1", time: "Mới mất 2 giờ trước", badge: "LOST", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAOPASj3FPIov4un4PWtwzmLaLOREFt8p_cUk12vQxBqKzFEFAFf39cZAPazbm7k1iOrPmOJOf2ChK6J-DkPP-S1aNVWKnjCMxKyG16Yq5_gbQvY6Hgu5K4zoAmDrQzXYtEZu5fFq6y39nc6iE72ykIVBcPevv133MiS3KLvhm5SH02g5gz3GyOBN9JjOyIpmi--jl42T3VkAg-85I5-qXhBwLhHHio73qEI5_1yD8acgMGZ8e-N6DfjplOhCr16iWVJCVmtqqElgA" },
     { id: 2, title: "Chùm chìa khóa Honda", district: "Quận 3", time: "Tìm thấy sáng nay", badge: "FOUND", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAd7jYdsV6YRHzhk0jQds_mzOnFLIhr3w90amMJC5VyAuMqQEtVW36BM3po9AeLxl3T7m994KVaGHXqQU8b6yEgbYRX6fEFy0ssecBbPEcHb_f9YWgeNDq-6K5IdoEN2kZDFDCBhFuScg86GgzEILpQLm_cV-4iPXGgNyZf4LxI_WpCoPfejak-lSRMjjB6UVML7Nm4gjB1V5HquyL-Cyf1GyxbhVk9WqNrqJ9z6DBYbQn6A4vyNzxMgr6i-yUlK9uQ615fLjn1c_Q" },
@@ -38,6 +40,16 @@ function ItemCard({ item }) {
 }
 
 export default function Home() {
+    const navigate = useNavigate();
+
+    const handleLostReport = () => {
+        navigate('/create-post?mode=lost');
+    };
+
+    const handleFoundReport = () => {
+        navigate('/create-post?mode=found');
+    };
+
     return (
         <main className="max-w-[1200px] mx-auto px-gutter-desktop">
             {/* Hero */}
@@ -50,11 +62,17 @@ export default function Home() {
                         Kết nối cộng đồng, sẻ chia thông tin, tìm lại vật phẩm quý giá của bạn trong lòng thành phố năng động.
                     </p>
                     <div className="flex flex-wrap gap-stack-md">
-                        <button className="px-8 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+                        <button
+                            onClick={handleLostReport}
+                            className="px-8 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
+                        >
                             <span className="material-symbols-outlined">report_gmailerrorred</span>
                             Báo mất đồ
                         </button>
-                        <button className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2">
+                        <button
+                            onClick={handleFoundReport}
+                            className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
+                        >
                             <span className="material-symbols-outlined">search_check</span>
                             Tìm thấy đồ
                         </button>
