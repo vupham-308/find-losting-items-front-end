@@ -138,7 +138,7 @@ export default function Home() {
         {/* CTA */}
         <div className="mt-stack-lg p-stack-lg bg-surface-container-high rounded-2xl text-center border-2 border-dashed border-outline-variant">
             <h3 className="text-[20px] font-semibold mb-stack-sm">Bạn không thấy đồ vật của mình?</h3>
-            <button className="px-10 py-4 bg-primary text-on-primary rounded-full font-bold shadow-lg transition-all text-[12px] tracking-widest">
+            <button onClick={handleLostReport} className="px-10 py-4 bg-primary text-on-primary rounded-full font-bold transition-all text-[12px] tracking-widest shadow-lg hover:scale-105 transition-transform items-center gap-2 ">
                 Đăng bài tìm đồ ngay!
             </button>
         </div>
