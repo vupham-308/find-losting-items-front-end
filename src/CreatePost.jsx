@@ -59,7 +59,7 @@ export default function CreatePost() {
     <main className="max-w-[800px] mx-auto px-4 md:px-0 py-8 min-h-screen">
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="font-headline-lg text-headline-lg mb-2">Đăng tin mới</h1>
+        <h1 className="font-headline-lg text-headline-lg-mobile mb-2 text-primary">Đăng tin mới</h1>
         <p className="text-on-surface-variant font-body-lg">
           Chia sẻ thông tin để cộng đồng cùng hỗ trợ bạn.
         </p>
