@@ -121,14 +121,6 @@ export default function Home() {
     <section className="flex-grow">
         <div className="flex justify-between items-end mb-stack-md">
             <h2 className="text-[32px] font-bold text-on-surface">Tin đăng mới nhất</h2>
-            <div className="flex gap-2">
-                <button className="p-2 bg-surface-container rounded-lg text-on-surface-variant hover:text-primary">
-                    <span className="material-symbols-outlined">grid_view</span>
-                </button>
-                <button className="p-2 bg-surface-container rounded-lg text-on-surface-variant hover:text-primary">
-                    <span className="material-symbols-outlined">list</span>
-                </button>
-            </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-stack-md">

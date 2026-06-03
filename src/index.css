@@ -74,13 +74,13 @@
 }
 
 .lost-badge {
-    background-color: rgba(251, 188, 4, 0.15);
-    color: #8a6802;
+    background-color: rgba(255, 255, 255, 255);
+    color: #c57b26;
 }
 
 .found-badge {
-    background-color: rgba(52, 168, 83, 0.15);
-    color: #1e6331;
+    background-color: rgba(255, 255, 255, 255);
+    color: #42bf63;
 }
 
 .card-shadow {
