@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const items = [
     { id: 1, title: "Ví tiền màu nâu", district: "Quận 1", time: "Mới mất 2 giờ trước", badge: "LOST", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAOPASj3FPIov4un4PWtwzmLaLOREFt8p_cUk12vQxBqKzFEFAFf39cZAPazbm7k1iOrPmOJOf2ChK6J-DkPP-S1aNVWKnjCMxKyG16Yq5_gbQvY6Hgu5K4zoAmDrQzXYtEZu5fFq6y39nc6iE72ykIVBcPevv133MiS3KLvhm5SH02g5gz3GyOBN9JjOyIpmi--jl42T3VkAg-85I5-qXhBwLhHHio73qEI5_1yD8acgMGZ8e-N6DfjplOhCr16iWVJCVmtqqElgA" },
@@ -13,6 +14,7 @@ const districts = ["Tất cả khu vực", "Quận 1", "Quận 3", "Quận 7", "
 
 function ItemCard({ item }) {
     return (
+        <Link to={`/posts/${item.id}`}>
         <div className="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group">
             <div className="aspect-[4/3] relative overflow-hidden">
                 <img
@@ -36,6 +38,7 @@ function ItemCard({ item }) {
                 </div>
             </div>
         </div>
+        </Link>
     )
 }
 

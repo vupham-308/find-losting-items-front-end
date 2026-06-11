@@ -23,7 +23,7 @@ export default function Header() {
         setUser(null)
     }
     return (
-        <header className="sticky top-0 w-full z-50 flex justify-between items-center px-gutter-desktop py-stack-sm max-w-[1200px] mx-auto bg-surface-container-lowest shadow-sm">
+        <header className="sticky top-0 w-full z-50 flex justify-between items-center px-gutter-desktop py-stack-sm bg-surface-container-lowest shadow-sm">
             {/* Logo */}
             <Link to={"/"}>
             <div className="flex items-center gap-2">
