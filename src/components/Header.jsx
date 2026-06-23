@@ -1,26 +1,11 @@
-import { useState } from "react"
 import { Link } from "react-router-dom"
-
-function getUserFromStorage() {
-    const token = localStorage.getItem("token")
-    const user = localStorage.getItem("user")
-    if (token && user) {
-        try {
-            return JSON.parse(user)
-        } catch {
-            return null
-        }
-    }
-    return null
-}
+import { useAuth } from "../context/AuthContext.jsx"
 
 export default function Header() {
-    const [user, setUser] = useState(getUserFromStorage)
+    const { user, logout } = useAuth()
 
-    const handleLogout = () => {
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        setUser(null)
+    const handleLogout = async () => {
+        await logout()
     }
     return (
         <header className="sticky top-0 w-full z-50 flex justify-between items-center px-gutter-desktop py-stack-sm bg-surface-container-lowest shadow-sm">
@@ -74,7 +59,7 @@ export default function Header() {
                         <div className="absolute right-0 mt-2 w-56 bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[60] overflow-hidden">
                             <div className="p-3 border-b border-outline-variant bg-surface-container-low">
                                 <p className="text-[12px] font-bold tracking-widest text-on-surface">{user.name}</p>
-                                <p className="text-[10px] text-on-surface-variant">{user.email}</p>
+                                <p className="text-[10px] text-on-surface-variant">{user.mail}</p>
                             </div>
                             <div className="py-1">
                                 <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low text-[14px] text-on-surface transition-colors">

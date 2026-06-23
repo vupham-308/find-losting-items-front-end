@@ -1,24 +1,13 @@
 import { useState } from "react"
-
-function VietnamFlag() {
-    return (
-        <span style={{
-            width: 24, height: 16,
-            background: "#da251d",
-            borderRadius: 2,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 10,
-            color: "#ffff00",
-            flexShrink: 0
-        }}>★</span>
-    )
-}
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext.jsx"
 
 export default function Register() {
+    const navigate = useNavigate()
+    const { register } = useAuth()
     const [form, setForm] = useState({
         fullName: "",
+        mail: "",
         phone: "",
         password: "",
         confirmPassword: "",
@@ -27,18 +16,31 @@ export default function Register() {
     const [showConfirm, setShowConfirm] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
-    const [agreed, setAgreed] = useState(false)
 
     const update = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
+    // Các điều kiện của mật khẩu, dùng để hiển thị checklist trực tiếp
+    const pwRules = [
+        { label: "Tối thiểu 8 ký tự", ok: form.password.length >= 8 },
+        { label: "Có chữ thường (a-z)", ok: /[a-z]/.test(form.password) },
+        { label: "Có chữ hoa (A-Z)", ok: /[A-Z]/.test(form.password) },
+        { label: "Có chữ số (0-9)", ok: /[0-9]/.test(form.password) },
+        { label: "Có ký tự đặc biệt", ok: /[^a-zA-Z0-9]/.test(form.password) },
+    ]
+
     const validate = () => {
         if (!form.fullName.trim()) return "Vui lòng nhập họ tên"
+        if (!form.mail.trim()) return "Vui lòng nhập email"
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.mail)) return "Email không hợp lệ"
         if (!form.phone.trim()) return "Vui lòng nhập số điện thoại"
         if (!/^[0-9]{9,10}$/.test(form.phone)) return "Số điện thoại không hợp lệ"
         if (!form.password) return "Vui lòng nhập mật khẩu"
-        if (form.password.length < 6) return "Mật khẩu tối thiểu 6 ký tự"
+        if (form.password.length < 8) return "Mật khẩu tối thiểu 8 ký tự"
+        if (!/[a-z]/.test(form.password)) return "Mật khẩu phải có chữ thường"
+        if (!/[A-Z]/.test(form.password)) return "Mật khẩu phải có chữ hoa"
+        if (!/[0-9]/.test(form.password)) return "Mật khẩu phải có chữ số"
+        if (!/[^a-zA-Z0-9]/.test(form.password)) return "Mật khẩu phải có ký tự đặc biệt"
         if (form.password !== form.confirmPassword) return "Mật khẩu xác nhận không khớp"
-        if (!agreed) return "Vui lòng đồng ý với điều khoản sử dụng"
         return ""
     }
 
@@ -51,23 +53,13 @@ export default function Register() {
 
         setLoading(true)
         try {
-            // TODO: thay bằng API thật
-            // const res = await fetch("/api/auth/register", {
-            //     method: "POST",
-            //     headers: { "Content-Type": "application/json" },
-            //     body: JSON.stringify({
-            //         fullName: form.fullName,
-            //         phone: form.phone,
-            //         password: form.password,
-            //     })
-            // })
-            // const data = await res.json()
-            // if (!res.ok) throw new Error(data.message)
-            // localStorage.setItem("token", data.token)
-            // localStorage.setItem("user", JSON.stringify(data.user))
-            // window.location.href = "/"
-
-            console.log("Register:", form)
+            await register({
+                name: form.fullName,
+                mail: form.mail,
+                password: form.password,
+                phone: form.phone,
+            })
+            navigate("/")
         } catch (err) {
             setError(err.message || "Đăng ký thất bại, vui lòng thử lại")
         } finally {
@@ -126,23 +118,38 @@ export default function Register() {
                             </div>
                         </div>
 
+                        {/* Email */}
+                        <div className="space-y-stack-sm">
+                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="mail">
+                                EMAIL
+                            </label>
+                            <div className="relative flex items-center">
+                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">mail</span>
+                                <input
+                                    id="mail"
+                                    type="email"
+                                    value={form.mail}
+                                    onChange={update("mail")}
+                                    placeholder="email@example.com"
+                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                />
+                            </div>
+                        </div>
+
                         {/* Phone */}
                         <div className="space-y-stack-sm">
                             <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="phone">
                                 SỐ ĐIỆN THOẠI
                             </label>
                             <div className="relative flex items-center">
-                                <div className="absolute left-4 flex items-center gap-2 border-r border-outline-variant pr-3 py-1">
-                                    <VietnamFlag />
-                                    <span className="text-on-surface-variant text-[14px]">+84</span>
-                                </div>
+                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">phone</span>
                                 <input
                                     id="phone"
                                     type="tel"
                                     value={form.phone}
                                     onChange={update("phone")}
                                     placeholder="Số điện thoại của bạn"
-                                    className="w-full pl-24 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
                                 />
                             </div>
                         </div>
@@ -159,7 +166,7 @@ export default function Register() {
                                     type={showPassword ? "text" : "password"}
                                     value={form.password}
                                     onChange={update("password")}
-                                    placeholder="Tối thiểu 6 ký tự"
+                                    placeholder="Tối thiểu 8 ký tự, có hoa/thường/số/đặc biệt"
                                     className="w-full pl-12 pr-12 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
                                 />
                                 <button
@@ -172,6 +179,23 @@ export default function Register() {
                                     </span>
                                 </button>
                             </div>
+
+                            {/* Password rules checklist */}
+                            <ul className="space-y-1 pt-1">
+                                {pwRules.map((rule) => (
+                                    <li
+                                        key={rule.label}
+                                        className={`text-[12px] flex items-center gap-1 transition-colors ${
+                                            rule.ok ? "text-primary" : "text-on-surface-variant"
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">
+                                            {rule.ok ? "check_circle" : "radio_button_unchecked"}
+                                        </span>
+                                        {rule.label}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
 
                         {/* Confirm Password */}
@@ -216,23 +240,6 @@ export default function Register() {
                             )}
                         </div>
 
-                        {/* Terms */}
-                        <div className="flex items-start gap-3">
-                            <input
-                                id="terms"
-                                type="checkbox"
-                                checked={agreed}
-                                onChange={(e) => setAgreed(e.target.checked)}
-                                className="mt-1 w-4 h-4 accent-primary cursor-pointer"
-                            />
-                            <label htmlFor="terms" className="text-[14px] text-on-surface-variant cursor-pointer">
-                                Tôi đồng ý với{" "}
-                                <a href="/terms" className="text-primary font-bold hover:underline">Điều khoản sử dụng</a>
-                                {" "}và{" "}
-                                <a href="/privacy" className="text-primary font-bold hover:underline">Chính sách bảo mật</a>
-                            </label>
-                        </div>
-
                         {/* Submit */}
                         <button
                             type="submit"
@@ -260,24 +267,13 @@ export default function Register() {
                         </div>
 
                         {/* Social */}
-                        <div className="grid grid-cols-2 gap-stack-md">
-                            <button
-                                type="button"
-                                className="flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors text-on-surface text-[12px] font-bold tracking-widest"
-                            >
-                                <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                                Google
-                            </button>
-                            <button
-                                type="button"
-                                className="flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors text-on-surface text-[12px] font-bold tracking-widest"
-                            >
-                                <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                                </svg>
-                                Facebook
-                            </button>
-                        </div>
+                        <button
+                            type="button"
+                            className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors text-on-surface text-[12px] font-bold tracking-widest"
+                        >
+                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+                            Google
+                        </button>
                     </form>
 
                     {/* Login link */}

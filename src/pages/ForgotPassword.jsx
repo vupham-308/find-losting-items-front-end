@@ -142,7 +142,7 @@ export default function ForgotPassword() {
             {/* Logo */}
             <header className="mb-stack-lg">
                 <div className="flex flex-col items-center gap-stack-sm">
-                    <a href="/" className="text-primary text-[20px] font-bold tracking-tight">Sài Gòn Tìm Đồ</a>
+                    <a href="/public" className="text-primary text-[20px] font-bold tracking-tight">Sài Gòn Tìm Đồ</a>
                     <div className="h-1 w-12 bg-primary-container rounded-full" />
                 </div>
             </header>
