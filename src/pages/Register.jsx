@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext.jsx"
 
 export default function Register() {
@@ -66,26 +66,92 @@ export default function Register() {
             setLoading(false)
         }
     }
+
     return (
-        <div className="min-h-screen bg-background flex flex-col justify-center items-center p-gutter-mobile">
+        <div className="min-h-screen flex bg-background">
 
-            {/* Logo */}
-            <header className="mb-stack-lg">
-                <div className="flex flex-col items-center gap-stack-sm">
-                    <span className="text-primary text-[20px] font-bold tracking-tight">Sài Gòn Tìm Đồ</span>
-                    <div className="h-1 w-12 bg-primary-container rounded-full" />
-                </div>
-            </header>
-
-            <main className="w-full max-w-md">
+            {/* ===== Cột trái: panel thương hiệu (chỉ hiện trên desktop) ===== */}
+            <aside className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative overflow-hidden flex-col justify-between p-12 xl:p-16 text-on-primary">
+                {/* Ảnh nền */}
+                <img
+                    src="/thumnail-login.png"
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Lớp phủ gradient xanh để chữ luôn đọc rõ */}
                 <div
-                    className="bg-surface-container-lowest rounded-lg p-stack-lg md:p-10"
-                    style={{ boxShadow: "0 4px 12px rgba(0,91,191,0.05), 0 2px 8px rgba(0,0,0,0.05)" }}
+                    className="absolute inset-0"
+                    style={{ background: "linear-gradient(150deg, rgba(0,68,147,0.92) 0%, rgba(0,91,191,0.80) 45%, rgba(26,115,232,0.55) 100%)" }}
+                />
+
+                {/* Logo + tên */}
+                <div className="relative flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[26px]">travel_explore</span>
+                    </div>
+                    <span className="text-[22px] font-bold tracking-tight">Sài Gòn Tìm Đồ</span>
+                </div>
+
+                {/* Thông điệp + điểm tin cậy */}
+                <div className="relative max-w-md">
+                    <h2 className="text-[34px] xl:text-[40px] font-bold leading-tight tracking-tight">
+                        Tham gia cộng đồng tìm đồ
+                    </h2>
+                    <p className="mt-4 text-[16px] text-white/80 leading-relaxed">
+                        Tạo tài khoản để đăng tin, kết nối và cùng nhau tìm lại những món đồ thất lạc một cách an toàn.
+                    </p>
+
+                    <ul className="mt-10 space-y-5">
+                        {[
+                            { icon: "verified_user", title: "An toàn & bảo mật", desc: "Thông tin cá nhân của bạn được mã hoá và bảo vệ." },
+                            { icon: "groups", title: "Cộng đồng uy tín", desc: "Hàng nghìn người dùng tin tưởng mỗi ngày." },
+                            { icon: "bolt", title: "Kết nối nhanh chóng", desc: "Đăng tin và nhận phản hồi chỉ trong vài phút." },
+                        ].map((item) => (
+                            <li key={item.icon} className="flex items-start gap-4">
+                                <div className="shrink-0 w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-[15px]">{item.title}</p>
+                                    <p className="text-[13px] text-white/70 leading-relaxed">{item.desc}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+
+                {/* Chân panel */}
+                <p className="relative text-[13px] text-white/60">
+                    © {new Date().getFullYear()} Sài Gòn Tìm Đồ. Bảo lưu mọi quyền.
+                </p>
+            </aside>
+
+            {/* ===== Cột phải: form đăng ký ===== */}
+            <main className="flex-1 flex items-center justify-center p-gutter-mobile sm:p-8 relative">
+
+                {/* Nút quay về đăng nhập */}
+                <Link
+                    to="/login"
+                    className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
                 >
-                    {/* Title */}
-                    <div className="text-center mb-stack-lg">
-                        <h1 className="text-on-surface text-[26px] font-bold tracking-tight mb-2">Tạo tài khoản</h1>
-                        <p className="text-on-surface-variant text-[16px]">
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                    Đăng nhập
+                </Link>
+
+                <div className="w-full max-w-md py-16 lg:py-12">
+
+                    {/* Logo cho mobile */}
+                    <div className="flex lg:hidden items-center justify-center gap-2 mb-stack-lg">
+                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary">
+                            <span className="material-symbols-outlined">travel_explore</span>
+                        </div>
+                        <span className="text-[20px] font-bold text-primary tracking-tight">Sài Gòn Tìm Đồ</span>
+                    </div>
+
+                    {/* Tiêu đề */}
+                    <div className="mb-stack-lg">
+                        <h1 className="text-on-surface text-[28px] font-bold tracking-tight">Tạo tài khoản</h1>
+                        <p className="text-on-surface-variant text-[15px] mt-1">
                             Tham gia cộng đồng Sài Gòn Tìm Đồ ngay hôm nay
                         </p>
                     </div>
@@ -94,7 +160,7 @@ export default function Register() {
 
                         {/* Error */}
                         {error && (
-                            <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-lg text-[14px]">
+                            <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-xl text-[14px]">
                                 <span className="material-symbols-outlined text-[18px]">error</span>
                                 {error}
                             </div>
@@ -102,79 +168,80 @@ export default function Register() {
 
                         {/* Full Name */}
                         <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="fullName">
-                                HỌ VÀ TÊN
+                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="fullName">
+                                Họ và tên
                             </label>
                             <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">person</span>
+                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">person</span>
                                 <input
                                     id="fullName"
                                     type="text"
                                     value={form.fullName}
                                     onChange={update("fullName")}
                                     placeholder="Nguyễn Văn A"
-                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                    className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
                                 />
                             </div>
                         </div>
 
                         {/* Email */}
                         <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="mail">
-                                EMAIL
+                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="mail">
+                                Email
                             </label>
                             <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">mail</span>
+                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">mail</span>
                                 <input
                                     id="mail"
                                     type="email"
                                     value={form.mail}
                                     onChange={update("mail")}
                                     placeholder="email@example.com"
-                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                    className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
                                 />
                             </div>
                         </div>
 
                         {/* Phone */}
                         <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="phone">
-                                SỐ ĐIỆN THOẠI
+                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="phone">
+                                Số điện thoại
                             </label>
                             <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">phone</span>
+                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">phone</span>
                                 <input
                                     id="phone"
                                     type="tel"
                                     value={form.phone}
                                     onChange={update("phone")}
                                     placeholder="Số điện thoại của bạn"
-                                    className="w-full pl-12 pr-4 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                    className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
                                 />
                             </div>
                         </div>
 
                         {/* Password */}
                         <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="password">
-                                MẬT KHẨU
+                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="password">
+                                Mật khẩu
                             </label>
                             <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">lock</span>
+                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
                                 <input
                                     id="password"
                                     type={showPassword ? "text" : "password"}
                                     value={form.password}
                                     onChange={update("password")}
-                                    placeholder="Tối thiểu 8 ký tự, có hoa/thường/số/đặc biệt"
-                                    className="w-full pl-12 pr-12 py-4 bg-surface border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none"
+                                    placeholder="Nhập mật khẩu của bạn"
+                                    className="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 text-on-surface-variant hover:text-on-surface transition-colors"
+                                    className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors"
+                                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                                 >
-                                    <span className="material-symbols-outlined">
+                                    <span className="material-symbols-outlined text-[20px]">
                                         {showPassword ? "visibility_off" : "visibility"}
                                     </span>
                                 </button>
@@ -200,29 +267,30 @@ export default function Register() {
 
                         {/* Confirm Password */}
                         <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[12px] font-bold tracking-widest" htmlFor="confirmPassword">
-                                XÁC NHẬN MẬT KHẨU
+                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="confirmPassword">
+                                Xác nhận mật khẩu
                             </label>
                             <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-on-surface-variant">lock_clock</span>
+                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock_clock</span>
                                 <input
                                     id="confirmPassword"
                                     type={showConfirm ? "text" : "password"}
                                     value={form.confirmPassword}
                                     onChange={update("confirmPassword")}
                                     placeholder="Nhập lại mật khẩu"
-                                    className={`w-full pl-12 pr-12 py-4 bg-surface border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all text-on-surface text-[16px] outline-none ${
+                                    className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none ${
                                         form.confirmPassword && form.password !== form.confirmPassword
-                                            ? "border-error focus:ring-error"
+                                            ? "border-error focus:ring-error/15 focus:border-error"
                                             : "border-outline-variant"
                                     }`}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirm(!showConfirm)}
-                                    className="absolute right-4 text-on-surface-variant hover:text-on-surface transition-colors"
+                                    className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors"
+                                    aria-label={showConfirm ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
                                 >
-                                    <span className="material-symbols-outlined">
+                                    <span className="material-symbols-outlined text-[20px]">
                                         {showConfirm ? "visibility_off" : "visibility"}
                                     </span>
                                 </button>
@@ -244,49 +312,52 @@ export default function Register() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-primary-container text-on-primary-container py-4 rounded-lg text-[20px] font-semibold hover:opacity-90 active:scale-[0.98] transition-all flex justify-center items-center gap-2 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+                            className="w-full bg-primary text-on-primary py-3.5 rounded-xl text-[16px] font-semibold hover:bg-primary-container active:scale-[0.99] transition-all flex justify-center items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                         >
                             {loading ? (
                                 <>
-                                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                                    <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
                                     Đang tạo tài khoản...
                                 </>
                             ) : (
                                 <>
                                     Tạo tài khoản
-                                    <span className="material-symbols-outlined">arrow_forward</span>
+                                    <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
                                 </>
                             )}
                         </button>
 
                         {/* Divider */}
-                        <div className="flex items-center gap-4 py-stack-sm">
+                        <div className="flex items-center gap-4 py-1">
                             <div className="h-px flex-grow bg-outline-variant" />
-                            <span className="text-outline text-[12px] font-bold tracking-widest">HOẶC</span>
+                            <span className="text-outline text-[12px] font-medium">hoặc tiếp tục với</span>
                             <div className="h-px flex-grow bg-outline-variant" />
                         </div>
 
-                        {/* Social */}
+                        {/* Google */}
                         <button
                             type="button"
-                            className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors text-on-surface text-[12px] font-bold tracking-widest"
+                            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-on-surface text-[15px] font-medium"
                         >
-                            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-                            Google
+                            <img src="https://www.google.com/favicon.ico" alt="" className="w-5 h-5" />
+                            Đăng ký bằng Google
                         </button>
                     </form>
 
                     {/* Login link */}
-                    <div className="mt-stack-lg text-center">
-                        <p className="text-on-surface-variant text-[14px]">
-                            Đã có tài khoản?{" "}
-                            <a href="/login" className="text-primary font-bold hover:underline">
-                                Đăng nhập ngay
-                            </a>
-                        </p>
+                    <p className="mt-stack-lg text-center text-on-surface-variant text-[14px]">
+                        Đã có tài khoản?{" "}
+                        <Link to="/login" className="text-primary font-semibold hover:underline">
+                            Đăng nhập ngay
+                        </Link>
+                    </p>
+
+                    {/* Tín hiệu bảo mật */}
+                    <div className="mt-stack-md flex items-center justify-center gap-1.5 text-outline text-[12px]">
+                        <span className="material-symbols-outlined text-[16px]">lock</span>
+                        Kết nối được bảo mật &amp; mã hoá
                     </div>
                 </div>
-
             </main>
         </div>
     )

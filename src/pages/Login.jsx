@@ -91,7 +91,17 @@ export default function Login() {
             </aside>
 
             {/* ===== Cột phải: form đăng nhập ===== */}
-            <main className="flex-1 flex items-center justify-center p-gutter-mobile sm:p-8">
+            <main className="flex-1 flex items-center justify-center p-gutter-mobile sm:p-8 relative">
+
+                {/* Nút quay về trang chủ */}
+                <Link
+                    to="/"
+                    className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
+                >
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                    Trang chủ
+                </Link>
+
                 <div className="w-full max-w-md">
 
                     {/* Logo cho mobile */}

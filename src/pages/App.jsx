@@ -9,7 +9,7 @@ import ForgotPassword from "./ForgotPassword.jsx";
 import DetailPost from "./DetailPost.jsx";
 
 // Những trang hiển thị toàn màn hình, không có Header/Footer
-const BARE_ROUTES = ["/login"]
+const BARE_ROUTES = ["/login", "/register"]
 
 export default function App() {
     const { pathname } = useLocation()
