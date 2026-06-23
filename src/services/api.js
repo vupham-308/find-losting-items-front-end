@@ -100,3 +100,13 @@ export async function logout() {
         localStorage.removeItem("user")
     }
 }
+
+// Quên mật khẩu: backend gửi mã OTP tới email của người dùng.
+export async function forgotPassword({ mail }) {
+    return api.post("/api/v1/auth/forgot-password", { mail })
+}
+
+// Đặt lại mật khẩu bằng mã OTP nhận qua email.
+export async function resetPassword({ mail, otp, newPassword }) {
+    return api.post("/api/v1/auth/reset-password", { mail, otp, newPassword })
+}
