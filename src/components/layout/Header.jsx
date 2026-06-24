@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { useAuth } from "../context/AuthContext.jsx"
+import { useAuth } from "../../hooks/useAuth.js"
 
 export default function Header() {
     const { user, logout } = useAuth()

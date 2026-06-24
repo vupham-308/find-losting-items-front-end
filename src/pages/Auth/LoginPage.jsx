@@ -1,9 +1,9 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext.jsx"
-import GoogleLoginButton from "../components/GoogleLoginButton.jsx"
+import { useAuth } from "../../hooks/useAuth.js"
+import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
-export default function Login() {
+export default function LoginPage() {
     const navigate = useNavigate()
     const { login } = useAuth()
     const [mail, setMail] = useState("")

@@ -1,10 +1,10 @@
 import { useState } from "react"
 import { Link } from "react-router-dom"
-import { forgotPassword, resetPassword } from "../services/api.js"
+import { forgotPassword, resetPassword } from "../../services/authService.js"
 
 const STEPS = { EMAIL: "email", RESET: "reset", SUCCESS: "success" }
 
-export default function ForgotPassword() {
+export default function ForgotPasswordPage() {
     const [step, setStep] = useState(STEPS.EMAIL)
     const [mail, setMail] = useState("")
     const [otp, setOtp] = useState(["", "", "", "", "", ""])

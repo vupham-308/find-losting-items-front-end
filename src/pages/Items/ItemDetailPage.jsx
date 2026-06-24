@@ -1,7 +1,7 @@
 import {useState} from "react";
 import {useParams} from "react-router-dom";
-import Header from "../components/Header.jsx";
-import Footer from "../components/Footer.jsx";
+import Header from "../../components/layout/Header.jsx";
+import Footer from "../../components/layout/Footer.jsx";
 
 // Dữ liệu bài đăng (có thể thay thế bằng API call sau)
 const postsData = [
@@ -101,7 +101,7 @@ const postsData = [
     },
 ];
 
-export default function PostDetail() {
+export default function ItemDetailPage() {
     const {id} = useParams();
     const post = postsData.find((p) => p.id === parseInt(id));
 

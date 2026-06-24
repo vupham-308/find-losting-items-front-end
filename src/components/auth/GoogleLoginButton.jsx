@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext.jsx"
+import { useAuth } from "../../hooks/useAuth.js"
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const GSI_SRC = "https://accounts.google.com/gsi/client"

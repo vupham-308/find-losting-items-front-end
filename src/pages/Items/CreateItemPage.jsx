@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertCircle, CheckCircle, ImagePlus, Send, Info } from 'lucide-react';
 
-export default function CreatePost() {
+export default function CreateItemPage() {
   const [mode, setMode] = useState('lost');
   const [formData, setFormData] = useState({
     title: '',

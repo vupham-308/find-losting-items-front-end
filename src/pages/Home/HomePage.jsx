@@ -42,7 +42,7 @@ function ItemCard({ item }) {
     )
 }
 
-export default function Home() {
+export default function HomePage() {
     const navigate = useNavigate();
 
     const handleLostReport = () => {
