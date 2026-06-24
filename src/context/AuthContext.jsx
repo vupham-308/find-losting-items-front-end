@@ -32,13 +32,19 @@ export function AuthProvider({ children }) {
         return u
     }
 
+    const googleLogin = async (payload) => {
+        const u = await authApi.googleLogin(payload)
+        setUser(u)
+        return u
+    }
+
     const logout = async () => {
         await authApi.logout()
         setUser(null)
     }
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout }}>
+        <AuthContext.Provider value={{ user, login, register, googleLogin, logout }}>
             {children}
         </AuthContext.Provider>
     )

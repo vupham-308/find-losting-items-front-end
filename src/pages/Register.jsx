@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext.jsx"
+import GoogleLoginButton from "../components/GoogleLoginButton.jsx"
 
 export default function Register() {
     const navigate = useNavigate()
@@ -335,13 +336,7 @@ export default function Register() {
                         </div>
 
                         {/* Google */}
-                        <button
-                            type="button"
-                            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors text-on-surface text-[15px] font-medium"
-                        >
-                            <img src="https://www.google.com/favicon.ico" alt="" className="w-5 h-5" />
-                            Đăng ký bằng Google
-                        </button>
+                        <GoogleLoginButton onError={setError} />
                     </form>
 
                     {/* Login link */}

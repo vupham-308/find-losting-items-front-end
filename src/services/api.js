@@ -88,6 +88,20 @@ export async function register({ name, mail, password, phone }) {
     return user
 }
 
+// Đăng nhập/đăng ký bằng Google: gửi idToken (JWT) lấy từ Google Identity Services.
+// Backend trả về giống login (data.accessToken...).
+export async function googleLogin({ idToken }) {
+    const res = await api.post("/api/v1/auth/google", { idToken })
+
+    const user = res?.data
+    if (user?.accessToken) {
+        localStorage.setItem("token", user.accessToken)
+        localStorage.setItem("user", JSON.stringify(user))
+    }
+
+    return user
+}
+
 // Đăng xuất: báo cho backend (cần token), rồi xóa session phía client.
 // Dù API lỗi vẫn xóa local để người dùng không bị kẹt đăng nhập.
 export async function logout() {
