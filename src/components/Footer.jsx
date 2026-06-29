@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 export default function Footer() {
     return (
         <footer className="w-full py-stack-lg px-gutter-desktop mt-stack-lg flex flex-col items-center gap-stack-md bg-surface-container-highest border-t border-outline-variant">
@@ -16,15 +18,14 @@ export default function Footer() {
                     </div>
                     <div className="flex flex-col gap-2">
                         <span className="text-[12px] font-bold tracking-widest text-on-surface">Pháp lý</span>
-                        <a href="#" className="text-[14px] text-on-surface-variant hover:text-primary hover:underline transition-all">Điều khoản sử dụng</a>
-                        <a href="#" className="text-[14px] text-on-surface-variant hover:text-primary hover:underline transition-all">Chính sách bảo mật</a>
+                        <Link to="/terms" className="text-[14px] text-on-surface-variant hover:text-primary hover:underline transition-all">Điều khoản sử dụng</Link>
+                        <Link to="/privacy" className="text-[14px] text-on-surface-variant hover:text-primary hover:underline transition-all">Chính sách bảo mật</Link>
                     </div>
                 </div>
             </div>
 
             <div className="w-full max-w-[1200px] pt-stack-md border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
                 <p className="text-[14px] text-on-surface-variant">© 2026 Sài Gòn Tìm Đồ. Vì một cộng đồng TP.HCM gắn kết.</p>
-
             </div>
         </footer>
     )

@@ -7,6 +7,9 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import Register from "./Register.jsx";
 import ForgotPassword from "./ForgotPassword.jsx";
 import DetailPost from "./DetailPost.jsx";
+import TermsOfService from "./TermsOfService.jsx";
+import PrivacyPolicy from "./PrivacyPolicy.jsx";
+import SearchImage from "./SearchImage.jsx";
 
 // Những trang hiển thị toàn màn hình, không có Header/Footer
 const BARE_ROUTES = ["/login", "/register"]
@@ -25,6 +28,9 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/create-post" element={<CreatePost />} />
                 <Route path="/posts/:id" element={<DetailPost />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/search-image" element={<SearchImage />} />
                 {/*<Route path="/profile" element={<Profile />} />*/}
             </Routes>
             {!hideChrome && <Footer />}

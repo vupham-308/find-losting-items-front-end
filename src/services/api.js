@@ -1,7 +1,7 @@
 // API client dùng chung cho toàn bộ app.
 // Base URL lấy từ biến môi trường VITE_API_URL (xem file .env).
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? ""
+const BASE_URL = "https://sba301-lost-and-found-backend.onrender.com"
 
 // Lấy token đã lưu (nếu có) để gắn vào header Authorization
 export function getToken() {
@@ -10,9 +10,14 @@ export function getToken() {
 
 // Hàm gọi API chung: tự gắn base URL, header JSON, token, và xử lý lỗi.
 async function request(path, { method = "GET", body, auth = false, headers = {} } = {}) {
+    const isFormData = body instanceof FormData
     const opts = {
         method,
-        headers: { "Content-Type": "application/json", ...headers },
+        headers: isFormData ? { ...headers } : { "Content-Type": "application/json", ...headers },
+    }
+
+    if (isFormData) {
+        delete opts.headers["Content-Type"]
     }
 
     if (auth) {
@@ -21,7 +26,7 @@ async function request(path, { method = "GET", body, auth = false, headers = {} 
     }
 
     if (body !== undefined) {
-        opts.body = JSON.stringify(body)
+        opts.body = isFormData ? body : JSON.stringify(body)
     }
 
     const res = await fetch(`${BASE_URL}${path}`, opts)
@@ -100,3 +105,110 @@ export async function logout() {
         localStorage.removeItem("user")
     }
 }
+
+function buildPostFormData(postData) {
+    const formData = new FormData();
+
+    if (postData.title) formData.append("title", postData.title);
+    if (postData.description) formData.append("description", postData.description);
+    if (postData.eventTime) formData.append("eventTime", postData.eventTime);
+    if (postData.userId) formData.append("userId", postData.userId);
+    if (postData.phone) formData.append("phone", postData.phone);
+    if (postData.name) formData.append("name", postData.name);
+    formData.append("hidePostType", postData.hidePostType || "PUBLIC");
+    if (postData.address) formData.append("address", postData.address);
+    if (postData.city) formData.append("city", postData.city);
+    if (postData.district) formData.append("district", postData.district);
+
+    if (postData.latitude) formData.append("latitude", postData.latitude);
+    if (postData.longitude) formData.append("longitude", postData.longitude);
+    if (postData.locationLevel) formData.append("locationLevel", postData.locationLevel);
+
+    if (postData.image) {
+        formData.append("image", postData.image);
+    }
+
+    if (postData.customQuestionsJson) {
+        formData.append("customQuestionsJson", postData.customQuestionsJson);
+    }
+
+    return formData;
+}
+
+export async function createLostPost(postData) {
+    try {
+        const formData = buildPostFormData(postData);
+        const response = await api.post("/api/v1/posts", formData, {
+            auth: true,
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Lỗi khi tạo bài viết báo mất:", error);
+        throw error;
+    }
+}
+
+export async function createFoundPost(postData) {
+    try {
+        const formData = buildPostFormData(postData);
+        const response = await api.post("/api/v1/posts/found", formData, {
+            auth: true,
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Lỗi khi tạo bài viết tìm thấy:", error);
+        throw error;
+    }
+}
+
+export async function suggestQuestions(description, image) {
+    try {
+        const formData = new FormData();
+        formData.append("description", description || "");
+        if (image) {
+            formData.append("image", image);
+        }
+
+        const response = await api.post("/api/v1/posts/suggest-questions", formData, {
+            auth: true,
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error("Lỗi khi gọi API gợi ý câu hỏi:", error);
+        throw error;
+    }
+}
+
+export async function generateDescription(image) {
+    try {
+        const formData = new FormData();
+        if (image) {
+            formData.append("image", image);
+        }
+
+        const response = await api.post("/api/v1/posts/generate-description", formData, {
+            auth: true,
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error("Lỗi khi gọi API tự động sinh mô tả:", error);
+        throw error;
+    }
+}
+
+
+
