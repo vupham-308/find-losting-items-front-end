@@ -5,6 +5,7 @@ import RegisterPage from "../pages/Auth/RegisterPage.jsx"
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage.jsx"
 import CreateItemPage from "../pages/Items/CreateItemPage.jsx"
 import ItemDetailPage from "../pages/Items/ItemDetailPage.jsx"
+import ProfilePage from "../pages/Auth/Profile.jsx"
 
 export default function AppRoutes() {
     return (
@@ -15,6 +16,7 @@ export default function AppRoutes() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/create-post" element={<CreateItemPage />} />
             <Route path="/posts/:id" element={<ItemDetailPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
         </Routes>
     )
 }

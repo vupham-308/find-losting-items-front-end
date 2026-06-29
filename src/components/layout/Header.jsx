@@ -62,6 +62,10 @@ export default function Header() {
                                 <p className="text-[10px] text-on-surface-variant">{user.mail}</p>
                             </div>
                             <div className="py-1">
+                                <Link to="/profile" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low text-[14px] text-on-surface transition-colors">
+                                    <span className="material-symbols-outlined text-[20px]">account_circle</span>
+                                    Hồ sơ cá nhân
+                                </Link>
                                 <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low text-[14px] text-on-surface transition-colors">
                                     <span className="material-symbols-outlined text-[20px]">post_add</span>
                                     Tin đã đăng

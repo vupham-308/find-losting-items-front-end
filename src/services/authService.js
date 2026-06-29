@@ -32,3 +32,18 @@ export function forgotPassword({ mail }) {
 export function resetPassword({ mail, otp, newPassword }) {
     return axiosClient.post(AUTH_ENDPOINTS.resetPassword, { mail, otp, newPassword })
 }
+
+// Làm mới access token bằng refresh token (gửi qua HTTP-only cookie).
+export function refreshToken() {
+    return axiosClient.post(AUTH_ENDPOINTS.refreshToken, null, { withCredentials: true })
+}
+
+// Lấy thông tin người dùng hiện tại (cần Bearer token).
+export function getMe() {
+    return axiosClient.get(AUTH_ENDPOINTS.me)
+}
+
+// Thiết lập mật khẩu cục bộ cho tài khoản Google (chưa có password).
+export function setupPassword({ newPassword, confirmPassword }) {
+    return axiosClient.post(AUTH_ENDPOINTS.setupPassword, { newPassword, confirmPassword })
+}

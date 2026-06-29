@@ -40,6 +40,12 @@ export const useAuthStore = create(
                     set({ user: null, token: null })
                 }
             },
+
+            // Cập nhật access token mới (dùng khi refresh token thành công).
+            setToken: (token) => set({ token }),
+
+            // Xoá toàn bộ auth state (dùng khi refresh token thất bại → buộc đăng xuất).
+            clearAuth: () => set({ user: null, token: null }),
         }),
         { name: "auth-storage" }
     )

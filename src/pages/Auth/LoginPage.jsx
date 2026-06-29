@@ -4,6 +4,7 @@ import { useAuth } from "../../hooks/useAuth.js"
 import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
 export default function LoginPage() {
+    console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
     const navigate = useNavigate()
     const { login } = useAuth()
     const [mail, setMail] = useState("")
@@ -219,7 +220,6 @@ export default function LoginPage() {
                             Đăng ký ngay
                         </Link>
                     </p>
-
                 </div>
             </main>
         </div>
