@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Mọi request /api sẽ được chuyển tiếp tới backend, tránh lỗi CORS khi dev
+      // Mọi request /authService sẽ được chuyển tiếp tới backend, tránh lỗi CORS khi dev
       '/api': {
         // Dùng 127.0.0.1 (IPv4) thay vì localhost để tránh Node phân giải sang ::1 (IPv6)
         // gây ECONNREFUSED khi backend chỉ lắng nghe trên IPv4.

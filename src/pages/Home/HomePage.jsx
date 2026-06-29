@@ -72,7 +72,7 @@ function ItemCard({ item }) {
     );
 }
 
-export default function Home() {
+export default function HomePage() {
     const navigate = useNavigate();
     const [postsList, setPostsList] = useState([]);
     const [page, setPage] = useState(0);
