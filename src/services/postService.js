@@ -83,6 +83,14 @@ export function getPostDetail(id) {
     return axiosClient.get(`${POST_ENDPOINTS.detail}/${id}`);
 }
 
+export function getPostVerifications(id) {
+    return axiosClient.get(`${POST_ENDPOINTS.detail}/${id}/verifications`);
+}
+
+export function claimPost(id, answers) {
+    return axiosClient.post(`${POST_ENDPOINTS.detail}/${id}/claim`, { answers });
+}
+
 export function getMyPosts(params) {
     return axiosClient.get(POST_ENDPOINTS.myPosts, { params });
 }
