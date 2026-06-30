@@ -1,49 +1,112 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { usePost } from "../../hooks/usePost";
+import PostDetailModal from "../../components/post/PostDetailModal.jsx";
 
-const items = [
-    { id: 1, title: "Ví tiền màu nâu", district: "Quận 1", time: "Mới mất 2 giờ trước", badge: "LOST", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAOPASj3FPIov4un4PWtwzmLaLOREFt8p_cUk12vQxBqKzFEFAFf39cZAPazbm7k1iOrPmOJOf2ChK6J-DkPP-S1aNVWKnjCMxKyG16Yq5_gbQvY6Hgu5K4zoAmDrQzXYtEZu5fFq6y39nc6iE72ykIVBcPevv133MiS3KLvhm5SH02g5gz3GyOBN9JjOyIpmi--jl42T3VkAg-85I5-qXhBwLhHHio73qEI5_1yD8acgMGZ8e-N6DfjplOhCr16iWVJCVmtqqElgA" },
-    { id: 2, title: "Chùm chìa khóa Honda", district: "Quận 3", time: "Tìm thấy sáng nay", badge: "FOUND", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAd7jYdsV6YRHzhk0jQds_mzOnFLIhr3w90amMJC5VyAuMqQEtVW36BM3po9AeLxl3T7m994KVaGHXqQU8b6yEgbYRX6fEFy0ssecBbPEcHb_f9YWgeNDq-6K5IdoEN2kZDFDCBhFuScg86GgzEILpQLm_cV-4iPXGgNyZf4LxI_WpCoPfejak-lSRMjjB6UVML7Nm4gjB1V5HquyL-Cyf1GyxbhVk9WqNrqJ9z6DBYbQn6A4vyNzxMgr6i-yUlK9uQ615fLjn1c_Q" },
-    { id: 3, title: "Điện thoại iPhone 13", district: "Quận 10", time: "Mới mất hôm qua", badge: "LOST", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuA8V3wVqxpIoAeN9lrROxj9JyqMMF8zpL4YlEZsXPnR_U1r9pxUv4fFBDg7zZihd8pGAKDzRQgle1xGp_NMkSkJSqI6BqqD4v1NTxtnPYOeS7ow9KJreJUqvwd7fdrkuGLI18A5EXgLUeJ1sKBa5HUc334a7FAcgrA324eWCjk2xnGizPJt6CfI-0OW0Al7ernA4XizxzIIC84cdcH83v4CnLwg_mN08B8XRGaSUJKu2gTQcp-wDLS__EXPweHIz4fp7oBKhbWQKew" },
-    { id: 4, title: "Mèo tam thể đi lạc", district: "Quận 7", time: "Tìm thấy 1 ngày trước", badge: "FOUND", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCKg2LxUjBpCadepRSi4oB532peeSXq7sM7o8HmMuuMV0SWYIyV-xDeJ9ZdZbSzRoOJUxPV4ZlGCyNwVNL1ihK3WmFfVbDgG4wA4xoLZ5sH4i-s97iV1xSM2sLl83kK60Bozm_9skuXf74fEs464Mp84W7nuhvpvYYUkQMeGIC28K7IjBh8O1ocnEcWR-LCHrMxEiez9_MHcxA-Hb3onxriMo1GsgcTsMghnw5aUcksksQUumviugfbsKWyky6e3FEB6AlSGvHxrEc" },
-    { id: 5, title: "Balo laptop đen", district: "TP. Thủ Đức", time: "Mới mất 3 giờ trước", badge: "LOST", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuATUaEmBfOveQ-rLc1Aujs_bYfblZBcmce9PVg2K0aMWc1WiR0kiZ9wqsMDBPW4UyzrN8ppbBBcJ91trAmTLyOvmbyg7KvEKg1FBr003Y_QSWn4XLZacDg0-OZ9oqgVx2hJSOlHExyrGICx6WVJ80f4K9CZtSmyBXBK5CrJEOclYwGC1H3y37Z9afGSM3kTUEK0ltAJUF2ubd68scPXwp4G2N9qWUPwgQhJp67msvQrRtZLryFiH8_9jMfBDszKVDri5yVLsJZ09KY" },
-    { id: 6, title: "Tai nghe Airpods", district: "Bình Thạnh", time: "Tìm thấy 5 giờ trước", badge: "FOUND", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCnyx52TOJ0aplA31NBt7mK8zQvSG5O1Y4CZkXFKAaqasQ9FJBQ3TPJWKtLMDUyuOtTnQfDH09ldODPGkmL_9CSHuTPIXyVV-kh-zpLVKubkLnXcwSG4OeWWQrMJ8gNrCPHAFlpSXRDdZScMwmtbASzyuHaIhB1Rc5gto-RINtVNtLS8iZKFpXS-B81Asw235mBKKgX7Q3gKLumc1Hq1Wf0emO0wzrSl6ksLaDywoFNf08M72JzxfEkGy5XUSnA0fKqhcZYCEMzLN4" },
-]
+const HCMC_DISTRICTS = [
+  "Tất cả khu vực",
+  "Quận 1", "Quận 3", "Quận 4", "Quận 5", "Quận 6", "Quận 7", "Quận 8", "Quận 10", "Quận 11", "Quận 12",
+  "Quận Bình Thạnh", "Quận Bình Tân", "Quận Gò Vấp", "Quận Phú Nhuận", "Quận Tân Bình", "Quận Tân Phú",
+  "Thành phố Thủ Đức", "Huyện Bình Chánh", "Huyện Cần Giờ", "Huyện Củ Chi", "Huyện Hóc Môn", "Huyện Nhà Bè"
+];
 
-const districts = ["Tất cả khu vực", "Quận 1", "Quận 3", "Quận 7", "TP. Thủ Đức"]
+const formatEventTime = (isoString) => {
+    if (!isoString) return "Không rõ thời gian";
+    try {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch {
+        return "Không rõ thời gian";
+    }
+};
 
-function ItemCard({ item }) {
+function ItemCard({ item, onClick }) {
+    const type = item.type || "LOST";
+    const imgUrl = item.image_url || item.imageUrl || item.image || (item.images && item.images.length > 0 ? item.images[0] : null) || "https://placehold.co/600x400?text=No+Image";
+    const districtName = item.location?.district || item.district || "Không rõ khu vực";
+
+    const hasMatchScore = item.match_score !== undefined && item.match_score !== null;
+    const scoreVal = hasMatchScore ? item.match_score * 100 : 0;
+    const matchPercent = scoreVal % 1 === 0 ? scoreVal.toFixed(0) : scoreVal.toFixed(1);
+
     return (
-        <Link to={`/posts/${item.id}`}>
-        <div className="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group">
-            <div className="aspect-[4/3] relative overflow-hidden">
-                <img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[12px] font-bold tracking-widest ${item.badge === "LOST" ? "lost-badge" : "found-badge"}`}>
-          {item.badge}
-        </span>
-            </div>
-            <div className="p-stack-md">
-                <h3 className="text-[20px] font-semibold mb-2">{item.title}</h3>
-                <div className="flex items-center gap-2 text-[14px] text-outline mb-1">
-                    <span className="material-symbols-outlined text-[18px]">location_on</span>
-                    <span>{item.district}</span>
+        <div onClick={onClick} className="cursor-pointer bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group flex flex-col justify-between h-full">
+                <div>
+                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
+                        <img
+                            src={imgUrl}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        {hasMatchScore && (
+                            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary text-white shadow-md">
+                                Khớp: {matchPercent}%
+                            </span>
+                        )}
+                        <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[12px] font-bold tracking-widest ${type === "LOST" ? "lost-badge" : "found-badge"}`}>
+                            {type}
+                        </span>
+                    </div>
+                    <div className="p-stack-md">
+                        <h3 className="text-[20px] font-semibold mb-2 line-clamp-1">{item.title}</h3>
+
+                        <div className="flex items-center gap-2 text-[14px] text-outline mb-1">
+                            <span className="material-symbols-outlined text-[18px]">location_on</span>
+                            <span>{districtName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[14px] text-outline">
+                            <span className="material-symbols-outlined text-[18px]">schedule</span>
+                            <span>{formatEventTime(item.created_at || item.createdAt || item.eventTime)}</span>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 text-[14px] text-outline">
-                    <span className="material-symbols-outlined text-[18px]">schedule</span>
-                    <span>{item.time}</span>
-                </div>
             </div>
-        </div>
-        </Link>
-    )
+    );
 }
 
 export default function HomePage() {
     const navigate = useNavigate();
+    const [selectedPostId, setSelectedPostId] = useState(null);
+    const {
+        postsList,
+        currentPage,
+        totalPages,
+        activeType,
+        activeDistrict,
+        isLoading,
+        searchQuery,
+        isSearchResult,
+        setActiveType,
+        setActiveDistrict,
+        setCurrentPage,
+        setSearchQuery,
+        fetchPosts,
+        executeSearch,
+        clearSearch
+    } = usePost();
+
+    useEffect(() => {
+        if (isSearchResult) {
+            executeSearch();
+        } else {
+            fetchPosts();
+        }
+    }, [currentPage, activeType, activeDistrict, isSearchResult]);
+
+    const handleSearchSubmit = () => {
+        executeSearch();
+    };
+
+    const handleClearSearch = () => {
+        clearSearch();
+    };
 
     const handleLostReport = () => {
         navigate('/create-post?mode=lost');
@@ -52,9 +115,8 @@ export default function HomePage() {
     const handleFoundReport = () => {
         navigate('/create-post?mode=found');
     };
-
     return (
-        <main className="max-w-[1200px] mx-auto px-gutter-desktop">
+        <main className="max-w-[1200px] mx-auto px-gutter-desktop pb-16">
             {/* Hero */}
             <section className="relative py-stack-lg my-stack-md rounded-xl overflow-hidden min-h-[400px] flex items-center bg-gradient-to-br from-primary-container to-on-primary-fixed-variant">
                 <div className="relative z-10 px-gutter-desktop max-w-2xl text-on-primary-container">
@@ -67,18 +129,20 @@ export default function HomePage() {
                     <div className="flex flex-wrap gap-stack-md">
                         <button
                             onClick={handleLostReport}
-                            className="px-8 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
+                            className="px-8 py-3 bg-secondary-container text-on-secondary-container font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
                         >
                             <span className="material-symbols-outlined">report_gmailerrorred</span>
-                            Báo mất đồ
+                            Đăng bài ngay
                         </button>
-                        <button
-                            onClick={handleFoundReport}
-                            className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2"
-                        >
-                            <span className="material-symbols-outlined">search_check</span>
-                            Tìm thấy đồ
-                        </button>
+                        <Link to="/search-image" className="inline-block">
+                            <button
+                                type="button"
+                                className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+                            >
+                                <span className="material-symbols-outlined">search_check</span>
+                                Tìm kiếm với hình ảnh
+                            </button>
+                        </Link>
                     </div>
                 </div>
                 <div className="absolute right-0 bottom-0 top-0 w-1/2 hidden md:block opacity-30">
@@ -93,52 +157,179 @@ export default function HomePage() {
             {/* Main layout */}
             <div className="flex flex-col lg:flex-row gap-stack-lg items-start">
                 {/* Sidebar */}
-                <aside className="hidden lg:flex flex-col w-64 gap-stack-md sticky top-24 shrink-0">
+                <aside className="hidden lg:flex flex-col w-64 gap-stack-md sticky top-24 shrink-0 text-left">
                     <div className="p-stack-md bg-surface-container-low rounded-xl">
                         <div className="mb-stack-md">
                             <h2 className="text-[20px] font-semibold text-primary">Khu vực</h2>
                             <p className="text-[14px] text-on-surface-variant">Lọc theo quận huyện</p>
                         </div>
-                        <nav className="flex flex-col gap-1">
-                            {districts.map((d, i) => (
-                                <a
+                        <nav className="flex flex-col gap-1 max-h-[450px] overflow-y-auto pr-1">
+                            {HCMC_DISTRICTS.map((d) => (
+                                <button
                                     key={d}
-                                    href="#"
-                                    className={`flex items-center gap-stack-sm rounded-lg px-4 py-2 text-[12px] font-bold tracking-widest transition-colors ${
-                                        i === 0
+                                    onClick={() => setActiveDistrict(d)}
+                                    className={`flex items-center gap-stack-sm rounded-lg px-4 py-2 text-[12px] font-bold tracking-widest transition-colors w-full text-left cursor-pointer ${
+                                        activeDistrict === d
                                             ? "bg-secondary-container text-on-secondary-container"
                                             : "text-on-surface-variant hover:bg-surface-container-highest"
                                     }`}
                                 >
-        <span className="material-symbols-outlined">
-            {i === 0 ? "map" : "location_on"}
-        </span>
+                                    <span className="material-symbols-outlined">
+                                        {d === "Tất cả khu vực" ? "map" : "location_on"}
+                                    </span>
                                     {d}
-                                </a>
+                                </button>
                             ))}
-                    </nav>
+                        </nav>
+                    </div>
+                </aside>
+
+                {/* Content */}
+                <section className="flex-grow w-full">
+                    {/* Header with Toggle Filter & Search */}
+                    <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 mb-stack-md pb-4 border-b border-outline-variant/30">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-grow">
+                            <h2 className="text-[28px] md:text-[32px] font-bold text-on-surface text-left">Tin đăng mới nhất</h2>
+                            
+                            {/* Search bar inside Tin đăng mới nhất */}
+                            <div className="relative max-w-md w-full flex items-center gap-2">
+                                <div className="relative flex-grow">
+                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                                        search
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') handleSearchSubmit();
+                                        }}
+                                        placeholder="Tìm kiếm tin đăng bằng AI..."
+                                        className="w-full pl-10 pr-10 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] focus:ring-2 focus:ring-primary outline-none"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={handleClearSearch}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface cursor-pointer flex items-center"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">close</span>
+                                        </button>
+                                    )}
+                                </div>
+                                <Link
+                                    to="/search-image"
+                                    title="Tìm kiếm bằng hình ảnh (AI)"
+                                    className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0 border border-primary/20"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">photo_camera</span>
+                                </Link>
+                            </div>
+                        </div>
+                        {/* Type Filter Tabs */}
+                        <div className="flex p-1 bg-surface-container rounded-xl border border-outline-variant/30 self-start xl:self-auto">
+                            <button
+                                onClick={() => setActiveType('LOST')}
+                                className={`px-5 py-2.5 rounded-lg text-xs font-bold tracking-widest transition-all cursor-pointer ${
+                                    activeType === 'LOST'
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                                }`}
+                            >
+                                Đồ bị mất
+                            </button>
+                            <button
+                                onClick={() => setActiveType('FOUND')}
+                                className={`px-5 py-2.5 rounded-lg text-xs font-bold tracking-widest transition-all cursor-pointer ${
+                                    activeType === 'FOUND'
+                                        ? 'bg-primary text-white shadow-md'
+                                        : 'text-on-surface-variant hover:bg-surface-container-high'
+                                }`}
+                            >
+                                Đồ tìm thấy
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Search Info Label (Moved below header & filters) */}
+                    {isSearchResult && (
+                        <div className="flex items-center gap-2 mb-6 p-4 bg-primary/5 rounded-xl border border-primary/10 text-[13px] font-bold text-primary text-left">
+                            <span className="material-symbols-outlined text-[18px]">info</span>
+                            <span>Đây là kết quả phù hợp nhất với tìm kiếm của bạn</span>
+                        </div>
+                    )}
+
+                    {/* Posts Grid */}
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                            <p className="text-on-surface-variant font-bold text-sm">Đang tải danh sách bài đăng...</p>
+                        </div>
+                    ) : postsList.length === 0 ? (
+                        <div className="text-center py-20 bg-surface-container-low rounded-2xl border-2 border-dashed border-outline-variant">
+                            <span className="material-symbols-outlined text-[48px] text-outline mb-2">folder_open</span>
+                            <h3 className="text-[18px] font-bold mb-1">Không có bài viết nào</h3>
+                            <p className="text-on-surface-variant text-xs mb-4">Hiện chưa có tin đăng nào phù hợp với bộ lọc của bạn.</p>
+                            <button
+                                onClick={activeType === 'LOST' ? handleLostReport : handleFoundReport}
+                                className="px-6 py-2.5 bg-primary text-white rounded-lg text-xs font-bold hover:brightness-110"
+                            >
+                                Đăng tin đầu tiên
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-stack-md">
+                            {postsList.map(item => <ItemCard key={item.id} item={item} onClick={() => setSelectedPostId(item.id)} />)}
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {!isLoading && totalPages > 1 && (
+                        <div className="flex justify-center items-center gap-2 mt-stack-lg">
+                            <button
+                                disabled={currentPage === 0}
+                                onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                                className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-50 disabled:pointer-events-none hover:bg-surface-container cursor-pointer"
+                            >
+                                Trang trước
+                            </button>
+                            <span className="text-xs font-bold text-on-surface-variant px-2">
+                                Trang {currentPage + 1} / {totalPages}
+                            </span>
+                            <button
+                                disabled={currentPage >= totalPages - 1}
+                                onClick={() => setCurrentPage(currentPage + 1)}
+                                className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-50 disabled:pointer-events-none hover:bg-surface-container cursor-pointer"
+                            >
+                                Trang sau
+                            </button>
+                        </div>
+                    )}
+
+                    {/* CTA */}
+                    <div className="mt-stack-lg p-stack-lg bg-surface-container-high rounded-2xl text-center border-2 border-dashed border-outline-variant">
+                        <h3 className="text-[20px] font-semibold mb-stack-sm">
+                            {activeType === 'LOST'
+                                ? "Bạn nhặt được đồ vật đánh rơi?"
+                                : "Bạn không thấy đồ vật của mình?"}
+                        </h3>
+                        <button
+                            onClick={activeType === 'LOST' ? handleFoundReport : handleLostReport}
+                            className="px-10 py-4 bg-primary text-on-primary rounded-full font-bold transition-all text-[12px] tracking-widest shadow-lg hover:scale-105 transition-transform items-center gap-2 cursor-pointer"
+                        >
+                            {activeType === 'LOST'
+                                ? "Đăng bài nhặt đồ ngay!"
+                                : "Đăng bài tìm đồ ngay!"}
+                        </button>
+                    </div>
+                </section>
             </div>
-        </aside>
-
-    {/* Content */}
-    <section className="flex-grow">
-        <div className="flex justify-between items-end mb-stack-md">
-            <h2 className="text-[32px] font-bold text-on-surface">Tin đăng mới nhất</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-stack-md">
-            {items.map(item => <ItemCard key={item.id} item={item} />)}
-        </div>
-
-        {/* CTA */}
-        <div className="mt-stack-lg p-stack-lg bg-surface-container-high rounded-2xl text-center border-2 border-dashed border-outline-variant">
-            <h3 className="text-[20px] font-semibold mb-stack-sm">Bạn không thấy đồ vật của mình?</h3>
-            <button onClick={handleLostReport} className="px-10 py-4 bg-primary text-on-primary rounded-full font-bold transition-all text-[12px] tracking-widest shadow-lg hover:scale-105 transition-transform items-center gap-2 ">
-                Đăng bài tìm đồ ngay!
-            </button>
-        </div>
-    </section>
-</div>
-</main>
-)
+            {selectedPostId && (
+                <PostDetailModal
+                    postId={selectedPostId}
+                    onClose={() => setSelectedPostId(null)}
+                    onActionComplete={isSearchResult ? executeSearch : fetchPosts}
+                />
+            )}
+        </main>
+    );
 }

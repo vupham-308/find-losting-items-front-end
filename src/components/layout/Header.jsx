@@ -19,17 +19,7 @@ export default function Header() {
 
             {/* Right side */}
             <div className="flex items-center gap-stack-sm">
-                {/* Search */}
-                <div className="relative hidden sm:block">
-                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
-                        search
-                    </span>
-                    <input
-                        className="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-[14px] w-48 lg:w-64 focus:ring-2 focus:ring-primary outline-none"
-                        placeholder="Tìm kiếm đồ vật..."
-                        type="text"
-                    />
-                </div>
+
 
                 {/* Auth: chưa login */}
                 {!user && (
