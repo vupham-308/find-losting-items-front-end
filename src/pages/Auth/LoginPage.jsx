@@ -4,7 +4,6 @@ import { useAuth } from "../../hooks/useAuth.js"
 import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
 export default function LoginPage() {
-    console.log("Google Client ID:", import.meta.env.VITE_GOOGLE_CLIENT_ID);
     const navigate = useNavigate()
     const { login } = useAuth()
     const [mail, setMail] = useState("")
@@ -216,14 +215,6 @@ export default function LoginPage() {
                         {/* Google */}
                         <GoogleLoginButton onError={setError} />
                     </form>
-
-                    {/* Register link */}
-                    <p className="mt-stack-lg text-center text-on-surface-variant text-[14px]">
-                        Bạn chưa có tài khoản?{" "}
-                        <Link to="/register" className="text-primary font-semibold hover:underline">
-                            Đăng ký ngay
-                        </Link>
-                    </p>
                 </div>
             </main>
         </div>

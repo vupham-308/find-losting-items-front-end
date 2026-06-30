@@ -56,14 +56,6 @@ export default function Header() {
                                     <span className="material-symbols-outlined text-[20px]">account_circle</span>
                                     Hồ sơ cá nhân
                                 </Link>
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low text-[14px] text-on-surface transition-colors">
-                                    <span className="material-symbols-outlined text-[20px]">post_add</span>
-                                    Tin đã đăng
-                                </a>
-                                <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-surface-container-low text-[14px] text-on-surface transition-colors">
-                                    <span className="material-symbols-outlined text-[20px]">send_and_archive</span>
-                                    Yêu cầu tìm đồ đã gửi
-                                </a>
                             </div>
                             <div className="py-1 border-t border-outline-variant">
                                 <button
