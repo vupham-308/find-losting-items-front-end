@@ -1,334 +1,429 @@
-import {useState} from "react";
-import {useParams} from "react-router-dom";
-import Header from "../../components/layout/Header.jsx";
-import Footer from "../../components/layout/Footer.jsx";
-
-// Dữ liệu bài đăng (có thể thay thế bằng API call sau)
-const postsData = [
-    {
-        id: 1,
-        title: "Ví tiền màu nâu",
-        district: "Quận 1",
-        time: "Mới mất 2 giờ trước",
-        badge: "LOST",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuAOPASj3FPIov4un4PWtwzmLaLOREFt8p_cUk12vQxBqKzFEFAFf39cZAPazbm7k1iOrPmOJOf2ChK6J-DkPP-S1aNVWKnjCMxKyG16Yq5_gbQvY6Hgu5K4zoAmDrQzXYtEZu5fFq6y39nc6iE72ykIVBcPevv133MiS3KLvhm5SH02g5gz3GyOBN9JjOyIpmi--jl42T3VkAg-85I5-qXhBwLhHHio73qEI5_1yD8acgMGZ8e-N6DfjplOhCr16iWVJCVmtqqElgA",
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuAd7jYdsV6YRHzhk0jQds_mzOnFLIhr3w90amMJC5VyAuMqQEtVW36BM3po9AeLxl3T7m994KVaGHXqQU8b6yEgbYRX6fEFy0ssecBbPEcHb_f9YWgeNDq-6K5IdoEN2kZDFDCBhFuScg86GgzEILpQLm_cV-4iPXGgNyZf4LxI_WpCoPfejak-lSRMjjB6UVML7Nm4gjB1V5HquyL-Cyf1GyxbhVk9WqNrqJ9z6DBYbQn6A4vyNzxMgr6i-yUlK9uQ615fLjn1c_Q",
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuA8V3wVqxpIoAeN9lrROxj9JyqMMF8zpL4YlEZsXPnR_U1r9pxUv4fFBDg7zZihd8pGAKDzRQgle1xGp_NMkSkJSqI6BqqD4v1NTxtnPYOeS7ow9KJreJUqvwd7fdrkuGLI18A5EXgLUeJ1sKBa5HUc334a7FAcgrA324eWCjk2xnGizPJt6CfI-0OW0Al7ernA4XizxzIIC84cdcH83v4CnLwg_mN08B8XRGaSUJKu2gTQcp-wDLS__EXPweHIz4fp7oBKhbWQKew",
-        ],
-        description: "Tôi vừa mất chiếc ví tiền màu nâu tại khu vực Quận 1. Ví chứa tiền mặt và các thẻ quan trọng. Bất cứ ai tìm thấy vui lòng liên hệ ngay.",
-        userName: "Nguyễn Văn A",
-        userInitial: "N",
-        userJoinDate: "2023",
-        publicContactInfo: true,
-        phone: "0901234567"
-    },
-    {
-        id: 2,
-        title: "Chùm chìa khóa Honda",
-        district: "Quận 3",
-        time: "Tìm thấy sáng nay",
-        badge: "FOUND",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuAd7jYdsV6YRHzhk0jQds_mzOnFLIhr3w90amMJC5VyAuMqQEtVW36BM3po9AeLxl3T7m994KVaGHXqQU8b6yEgbYRX6fEFy0ssecBbPEcHb_f9YWgeNDq-6K5IdoEN2kZDFDCBhFuScg86GgzEILpQLm_cV-4iPXGgNyZf4LxI_WpCoPfejak-lSRMjjB6UVML7Nm4gjB1V5HquyL-Cyf1GyxbhVk9WqNrqJ9z6DBYbQn6A4vyNzxMgr6i-yUlK9uQ615fLjn1c_Q",
-        ],
-        description: "Tôi nhặt được một chùm chìa khóa Honda tại khu vực Quận 3 sáng nay. Chìa khóa được giữ lại an toàn. Ai là chủ nhân vui lòng liên hệ để nhận lại.",
-        userName: "Trần Thị B",
-        userInitial: "T",
-        userJoinDate: "2023",
-        publicContactInfo: false,
-        phone: "0901234567"
-    },
-    {
-        id: 3,
-        title: "Điện thoại iPhone 13",
-        district: "Quận 10",
-        time: "Mới mất hôm qua",
-        badge: "LOST",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuA8V3wVqxpIoAeN9lrROxj9JyqMMF8zpL4YlEZsXPnR_U1r9pxUv4fFBDg7zZihd8pGAKDzRQgle1xGp_NMkSkJSqI6BqqD4v1NTxtnPYOeS7ow9KJreJUqvwd7fdrkuGLI18A5EXgLUeJ1sKBa5HUc334a7FAcgrA324eWCjk2xnGizPJt6CfI-0OW0Al7ernA4XizxzIIC84cdcH83v4CnLwg_mN08B8XRGaSUJKu2gTQcp-wDLS__EXPweHIz4fp7oBKhbWQKew",
-        ],
-        description: "Điện thoại iPhone 13 màu đen mất tại khu vực Quận 10. Điện thoại có gắn ốp lưng và miếng dán kính cường lực. Vui lòng liên hệ nếu có thông tin.",
-        userName: "Lê Văn C",
-        userInitial: "L",
-        userJoinDate: "2023",
-        verified: false,
-    },
-    {
-        id: 4,
-        title: "Mèo tam thể đi lạc",
-        district: "Quận 7",
-        time: "Tìm thấy 1 ngày trước",
-        badge: "FOUND",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuCKg2LxUjBpCadepRSi4oB532peeSXq7sM7o8HmMuuMV0SWYIyV-xDeJ9ZdZbSzRoOJUxPV4ZlGCyNwVNL1ihK3WmFfVbDgG4wA4xoLZ5sH4i-s97iV1xSM2sLl83kK60Bozm_9skuXf74fEs464Mp84W7nuhvpvYYUkQMeGIC28K7IjBh8O1ocnEcWR-LCHrMxEiez9_MHcxA-Hb3onxriMo1GsgcTsMghnw5aUcksksQUumviugfbsKWyky6e3FEB6AlSGvHxrEc",
-        ],
-        description: "Tôi nhặt được một chú mèo tam thể tại khu vực Quận 7 hôm qua. Chú mèo khỏe mạnh và hiền lành. Chủ nhân vui lòng liên hệ soonest để nhận lại bé cưng.",
-        userName: "Phạm Thị D",
-        userInitial: "P",
-        userJoinDate: "2023",
-        verified: true,
-    },
-    {
-        id: 5,
-        title: "Balo laptop đen",
-        district: "TP. Thủ Đức",
-        time: "Mới mất 3 giờ trước",
-        badge: "LOST",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuATUaEmBfOveQ-rLc1Aujs_bYfblZBcmce9PVg2K0aMWc1WiR0kiZ9wqsMDBPW4UyzrN8ppbBBcJ91trAmTLyOvmbyg7KvEKg1FBr003Y_QSWn4XLZacDg0-OZ9oqgVx2hJSOlHExyrGICx6WVJ80f4K9CZtSmyBXBK5CrJEOclYwGC1H3y37Z9afGSM3kTUEK0ltAJUF2ubd68scPXwp4G2N9qWUPwgQhJp67msvQrRtZLryFiH8_9jMfBDszKVDri5yVLsJZ09KY",
-        ],
-        description: "Balo laptop đen của tôi bị mất tại TP. Thủ Đức. Bên trong chứa laptop và các vật dụng cá nhân. Ai tìm thấy vui lòng liên hệ.",
-        userName: "Võ Văn E",
-        userInitial: "V",
-        userJoinDate: "2023",
-        verified: true,
-    },
-    {
-        id: 6,
-        title: "Tai nghe Airpods",
-        district: "Bình Thạnh",
-        time: "Tìm thấy 5 giờ trước",
-        badge: "FOUND",
-        images: [
-            "https://lh3.googleusercontent.com/aida-public/AB6AXuCnyx52TOJ0aplA31NBt7mK8zQvSG5O1Y4CZkXFKAaqasQ9FJBQ3TPJWKtLMDUyuOtTnQfDH09ldODPGkmL_9CSHuTPIXyVV-kh-zpLJubkLnXcwSG4OeWWQrMJ8gNrCPHAFlpSXRDdZScMwmtbASzyuHaIhB1Rc5gto-RINtVNtLS8iZKFpXS-B81Asw235mBKKgX7Q3gKLumc1Hq1Wf0emO0wzrSl6ksLaDywoFNf08M72JzxfEkGy5XUSnA0fKqhcZYCEMzLN4",
-        ],
-        description: "Tôi nhặt được một cặp tai nghe Airpods tại Bình Thạnh. Tai nghe còn pin tốt. Chủ nhân vui lòng liên hệ để nhận lại.",
-        userName: "Hoàng Văn F",
-        userInitial: "H",
-        userJoinDate: "2023",
-        verified: true,
-    },
-];
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth.js";
+import { getPostDetail, getPostVerifications, claimPost } from "../../services/postService.js";
 
 export default function ItemDetailPage() {
-    const {id} = useParams();
-    const post = postsData.find((p) => p.id === parseInt(id));
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { user } = useAuth();
 
-    const [selectedImage, setSelectedImage] = useState(post?.images[0] || "");
+    const [post, setPost] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
-    if (!post) {
+    // Verification questions from API
+    const [questionsList, setQuestionsList] = useState([]);
+    const [questionsLoading, setQuestionsLoading] = useState(false);
+
+    // Verification form state
+    const [answers, setAnswers] = useState({});
+    const [isVerified, setIsVerified] = useState(false);
+    const [claimResult, setClaimResult] = useState(null);   // null | { approved, score, threshold, details }
+    const [verificationLoading, setVerificationLoading] = useState(false);
+    const [verificationError, setVerificationError] = useState("");
+
+    // Fetch post detail
+    useEffect(() => {
+        if (!id) return;
+        async function fetchDetail() {
+            setLoading(true);
+            setError("");
+            try {
+                const response = await getPostDetail(id);
+                const postData = response?.data || response;
+                if (postData) {
+                    setPost(postData);
+                } else {
+                    setError("Không tìm thấy thông tin chi tiết bài viết");
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải chi tiết:", err);
+                setError(err.message || "Không thể tải chi tiết bài viết");
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchDetail();
+    }, [id]);
+
+    // Fetch verification questions (only for FOUND posts when not owner)
+    useEffect(() => {
+        if (!post || !id) return;
+        const currentUserId = user ? (user.userId || user.id) : null;
+        const isOwner = currentUserId && String(post.owner?.user_id) === String(currentUserId);
+        if (post.type !== "FOUND" || isOwner) return;
+
+        async function fetchQuestions() {
+            setQuestionsLoading(true);
+            try {
+                const response = await getPostVerifications(id);
+                const data = response?.data || response;
+                const qs = data?.questions || [];
+                if (qs.length > 0) {
+                    setQuestionsList(qs);
+                }
+            } catch (err) {
+                console.warn("Không lấy được câu hỏi xác minh:", err);
+            } finally {
+                setQuestionsLoading(false);
+            }
+        }
+        fetchQuestions();
+    }, [post, id, user]);
+
+    if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50">
-                <Header/>
-                <main className="max-w-7xl mx-auto px-4 py-6">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold">Bài đăng không tồn tại</h2>
-                    </div>
-                </main>
-                <Footer/>
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-3">
+                <span className="material-symbols-outlined animate-spin text-[48px] text-primary">progress_activity</span>
+                <p className="text-on-surface-variant font-medium">Đang tải thông tin chi tiết bài viết...</p>
             </div>
         );
     }
 
-    const similarPosts = postsData.filter((p) => p.id !== post.id).slice(0, 4);
+    if (error || !post) {
+        return (
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 text-center px-4">
+                <span className="material-symbols-outlined text-[64px] text-error">error</span>
+                <h2 className="text-2xl font-bold text-on-surface">{error || "Bài viết không tồn tại"}</h2>
+                <button
+                    onClick={() => navigate("/")}
+                    className="mt-2 px-6 py-3 bg-primary text-on-primary rounded-full font-semibold hover:opacity-90 cursor-pointer"
+                >
+                    Quay lại trang chủ
+                </button>
+            </div>
+        );
+    }
+
+    const currentUserId = user ? (user.userId || user.id) : null;
+    const isOwner = currentUserId && String(post.owner?.user_id) === String(currentUserId);
+    const hasContactInfo = post.owner?.phone || post.owner?.email;
+
+    const handleAnswerChange = (qIndex, value) => {
+        setAnswers(prev => ({ ...prev, [qIndex]: value }));
+    };
+
+    const handleVerifySubmit = async (e) => {
+        e.preventDefault();
+        setVerificationError("");
+        setClaimResult(null);
+
+        const unanswered = questionsList.some((_, idx) => !answers[idx]?.trim());
+        if (unanswered) {
+            setVerificationError("Vui lòng trả lời đầy đủ tất cả các câu hỏi xác minh.");
+            return;
+        }
+
+        // Build answers payload: [{ question_id, answer }]
+        const answersPayload = questionsList.map((q, idx) => ({
+            question_id: q.id,
+            answer: answers[idx]?.trim() || ""
+        }));
+
+        setVerificationLoading(true);
+        try {
+            const response = await claimPost(id, answersPayload);
+            const data = response?.data || response;
+            setClaimResult(data);
+            if (data?.approved) {
+                setIsVerified(true);
+            }
+        } catch (err) {
+            const errData = err?.response?.data;
+            const msg = errData?.message || err.message || "";
+
+            // Backend trả về HTTP error khi bị rejected — chuyển thành rejected UI thay vì toast lỗi
+            const isRejection = msg.toLowerCase().includes("rejected") || msg.toLowerCase().includes("score below");
+            if (isRejection) {
+                setClaimResult({
+                    approved: false,
+                    score: errData?.score ?? 0,
+                    threshold: errData?.threshold ?? 0.6,
+                    message: msg
+                });
+            } else {
+                setVerificationError(msg || "Xác minh thất bại. Vui lòng thử lại.");
+            }
+        } finally {
+            setVerificationLoading(false);
+        }
+    };
 
     return (
-        <div className="min-h-screen bg-slate-50">
-            {/* MAIN */}
-            <main className="max-w-7xl mx-auto px-4 py-6">
-                <div className="grid lg:grid-cols-10 gap-8">
-                    {/* LEFT */}
-                    <div className="lg:col-span-7 space-y-6">
-                        {/* Gallery */}
-                        <section className="bg-white rounded-xl overflow-hidden shadow">
-                            <div className="relative aspect-[4/3]">
-                                <img
-                                    src={selectedImage}
-                                    alt={post.title}
-                                    className="w-full h-full object-cover"
-                                />
+        <div className="min-h-screen bg-background">
+            <main className="max-w-6xl mx-auto px-4 py-6 w-full">
 
-                                <span
-                                    className={`absolute top-4 right-4 px-4 py-1 rounded-full font-semibold ${
-                                        post.badge === "LOST"
-                                            ? "lost-badge"
-                                            : "found-badge"
-                                    }`}
-                                >
-                                    {post.badge === "LOST"
-                                        ? "LOST"
-                                        : "FOUND"}
-                                </span>
+                {/* Back button */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="mb-5 inline-flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[14px] font-semibold cursor-pointer"
+                >
+                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                    Quay lại
+                </button>
+
+                <div className="grid lg:grid-cols-10 gap-6">
+
+                    {/* ── LEFT: image + info (smaller) ── */}
+                    <div className="lg:col-span-4 space-y-4">
+
+                        {/* Image — compact */}
+                        <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm">
+                            <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
+                                {post.image_url || post.blurred_image_url ? (
+                                    <img
+                                        src={post.image_url || post.blurred_image_url}
+                                        alt={post.title}
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center gap-2 text-outline py-10">
+                                        <span className="material-symbols-outlined text-[48px]">image</span>
+                                        <span className="text-sm font-medium">Không có hình ảnh</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Post info card */}
+                        <div className="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-4 text-left">
+                            {/* Badges */}
+                            <div className="flex flex-wrap gap-2">
+                                <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
+                                    post.type === "LOST"
+                                        ? "bg-error-container text-on-error-container border border-error/20"
+                                        : "bg-primary-container text-on-primary-container border border-primary/20"
+                                }`}>{post.type}</span>
+
+                                {post.status && (
+                                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
+                                        post.status === "ACTIVE"
+                                            ? "bg-success/10 text-success border border-success/30"
+                                            : post.status === "RESOLVED"
+                                            ? "bg-outline/10 text-outline border border-outline/30"
+                                            : "bg-error/10 text-error border border-error/30"
+                                    }`}>
+                                        {post.status === "ACTIVE" ? "ĐANG HOẠT ĐỘNG" : post.status === "RESOLVED" ? "ĐÃ GIẢI QUYẾT" : "ĐÃ XÓA"}
+                                    </span>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-4 gap-2 p-3">
-                                {post.images.map((img, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSelectedImage(img)}
-                                        className={`aspect-square rounded-lg overflow-hidden border-2 ${
-                                            selectedImage === img
-                                                ? "border-blue-500"
-                                                : "border-transparent"
-                                        }`}
-                                    >
-                                        <img
-                                            src={img}
-                                            alt={`${post.title} ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
+                            <h1 className="text-xl font-extrabold text-on-surface leading-snug">{post.title}</h1>
 
-                        {/* Detail */}
-                        <section className="bg-white p-6 rounded-xl shadow">
-                            <h2 className="text-3xl font-bold mb-4">{post.title}</h2>
-
-                            <div className="flex gap-6 text-gray-500 border-b pb-4">
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined">location_on</span>
-                                    <span>{post.district}</span>
+                            <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-on-surface-variant text-[13px] border-y border-outline-variant/20 py-3">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[16px] text-primary">location_on</span>
+                                    <span className="font-medium">{post.location?.district || "Chưa xác định"}</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="material-symbols-outlined">schedule</span>
-                                    <span>{post.time}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                                    <span className="font-medium">
+                                        {post.created_at
+                                            ? new Date(post.created_at).toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" })
+                                            : "Chưa rõ"}
+                                    </span>
                                 </div>
                             </div>
 
-                            <div className="mt-5">
-                                <h3 className="font-bold text-blue-600 uppercase mb-3">
-                                    Mô tả chi tiết
-                                </h3>
-
-                                <p className="leading-7 text-gray-600">
-                                    {post.description}
-                                </p>
-                            </div>
-                        </section>
-                    </div>
-
-                    {/* RIGHT */}
-                    <aside className="lg:col-span-3 space-y-6">
-                        {/* User */}
-                        <div className="bg-white p-6 rounded-xl shadow">
-                            <h3 className="font-semibold text-gray-500 mb-4">
-                                Người đăng tin
-                            </h3>
-
-                            {post.publicContactInfo ? (
-                                <>
-                                    <div className="flex gap-3 items-center mb-6">
-                                        <div
-                                            className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-                                            {post.userInitial}
-                                        </div>
-
-                                        <div>
-                                            <p className="font-semibold">
-                                                {post.userName}
-                                            </p>
-
-                                            <p className="text-sm text-gray-500">
-                                                Thành viên từ {post.userJoinDate}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <span className="material-symbols-outlined">
-                                                call
-                                            </span>
-                                            <span>{post.phone}</span>
-                                        </div>
-
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="bg-slate-50 border rounded-xl p-4 mb-6">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="material-symbols-outlined text-gray-500">
-                                            lock
-                                        </span>
-                                        <span className="font-medium">
-                                            Thông tin đang được bảo mật
-                                        </span>
-                                    </div>
-
-                                    <p className="text-sm text-gray-500">
-                                        Người đăng đã chọn không công khai
-                                        thông tin cá nhân.
+                            {post.description && (
+                                <div>
+                                    <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Mô tả</p>
+                                    <p className="text-on-surface text-[14px] leading-relaxed whitespace-pre-line">
+                                        {post.description}
                                     </p>
                                 </div>
                             )}
 
-                            <button
-                                className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition"
-                                onClick={() =>
-                                    alert("Yêu cầu xác minh đã được gửi")
-                                }
-                            >
-                                Bắt đầu xác minh đồ vật
-                            </button>
-                        </div>
-
-                        {/* Safety */}
-                        <div className="bg-yellow-50 border border-yellow-300 p-5 rounded-xl">
-                            <h4 className="font-bold mb-2">🛡️ Mẹo an toàn</h4>
-
-                            <p className="text-sm leading-6">
-                                Khi nhận lại đồ, hãy hẹn gặp ở nơi công cộng
-                                đông người. Không chuyển khoản bất kỳ khoản
-                                phí chuộc đồ nào trước khi nhận được vật phẩm.
-                            </p>
-                        </div>
-                    </aside>
-                </div>
-
-                {/* Similar Posts */}
-                <section className="mt-10">
-                    <div className="flex justify-between mb-5">
-                        <h3 className="text-2xl font-bold">Tin đăng tương tự</h3>
-
-                        <button className="text-blue-600">Xem tất cả →</button>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-                        {similarPosts.map((p) => (
-                            <div
-                                key={p.id}
-                                className="bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition"
-                            >
-                                <div className="relative aspect-[4/3]">
-                                    <img
-                                        src={p.images[0]}
-                                        alt={p.title}
-                                        className="w-full h-full object-cover"
-                                    />
-
-                                    <span
-                                        className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-bold ${
-                                            p.badge === "FOUND"
-                                                ? "found-badge"
-                                                : "lost-badge"
-                                        }`}
-                                    >
-                                        {p.badge === "FOUND"
-                                            ? "FOUND"
-                                            : "LOST"}
-                                    </span>
-                                </div>
-
-                                <div className="p-stack-md">
-                                    <h3 className="text-[20px] font-semibold mb-2">{p.title}</h3>
-                                    <div className="flex items-center gap-2 text-[14px] text-outline mb-1">
-                                        <span className="material-symbols-outlined text-[18px]">location_on</span>
-                                        <span>{p.district}</span>
+                            {/* Contact Info (owner or verified or public) */}
+                            <div className="pt-2 border-t border-outline-variant/20">
+                                <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-2">Người đăng</p>
+                                {(isOwner || isVerified || hasContactInfo) ? (
+                                    <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-2 text-[13px]">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px] text-primary">person</span>
+                                            <span className="font-bold text-on-surface">{post.owner?.full_name || "Người đăng tin"}</span>
+                                        </div>
+                                        {post.owner?.phone && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px] text-primary">call</span>
+                                                <a href={`tel:${post.owner.phone}`} className="text-primary hover:underline font-semibold">{post.owner.phone}</a>
+                                            </div>
+                                        )}
+                                        {post.owner?.email && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[18px] text-primary">mail</span>
+                                                <span className="text-on-surface-variant">{post.owner.email}</span>
+                                            </div>
+                                        )}
+                                        {isVerified && (
+                                            <p className="text-success text-[11px] font-semibold flex items-center gap-1 pt-1">
+                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                Đã xác minh — thông tin được mở khóa
+                                            </p>
+                                        )}
                                     </div>
-                                    <div className="flex items-center gap-2 text-[14px] text-outline">
-                                        <span className="material-symbols-outlined text-[18px]">schedule</span>
-                                        <span>{p.time}</span>
+                                ) : (
+                                    <div className="bg-surface-container-low border border-outline-variant/20 rounded-xl p-3 flex items-center gap-2 text-[13px] text-on-surface-variant">
+                                        <span className="material-symbols-outlined text-[18px] text-outline">lock</span>
+                                        <span>Trả lời câu hỏi để mở khóa thông tin liên hệ.</span>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        ))}
+                        </div>
                     </div>
-                </section>
-            </main>
 
+                    {/* ── RIGHT: Verification form (wider) ── */}
+                    <div className="lg:col-span-6 space-y-5 text-left">
+
+                        {/* ── Approved result banner ── */}
+                        {claimResult?.approved && (
+                            <div className="bg-success/10 border border-success/30 rounded-2xl overflow-hidden">
+                                <div className="px-5 py-4 flex items-center gap-3 border-b border-success/20">
+                                    <span className="material-symbols-outlined text-[28px] text-success">check_circle</span>
+                                    <p className="font-bold text-success text-[16px]">Xác minh thành công!</p>
+                                </div>
+                                {/* Revealed contact info */}
+                                {claimResult.details && (
+                                    <div className="px-5 py-4 space-y-2 text-[14px]">
+                                        <p className="text-[12px] font-bold text-success uppercase tracking-wider mb-3">Thông tin liên hệ người nhặt được đồ</p>
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[20px] text-primary">person</span>
+                                            <span className="font-bold text-on-surface">{claimResult.details.owner?.full_name || "Người đăng tin"}</span>
+                                        </div>
+                                        {claimResult.details.owner?.phone && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[20px] text-primary">call</span>
+                                                <a href={`tel:${claimResult.details.owner.phone}`} className="text-primary font-bold hover:underline text-[15px]">
+                                                    {claimResult.details.owner.phone}
+                                                </a>
+                                            </div>
+                                        )}
+                                        {claimResult.details.owner?.email && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-[20px] text-primary">mail</span>
+                                                <span className="text-on-surface-variant">{claimResult.details.owner.email}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── Rejected result banner ── */}
+                        {claimResult && !claimResult.approved && (
+                            <div className="bg-error/10 border border-error/30 rounded-2xl px-5 py-4 space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[28px] text-error">cancel</span>
+                                        <p className="font-bold text-error text-[15px]">Xác minh không thành công</p>
+                                    </div>
+                                <button
+                                    onClick={() => { setClaimResult(null); setAnswers({}); setVerificationError(""); }}
+                                    className="text-[13px] text-primary font-semibold hover:underline cursor-pointer"
+                                >
+                                    Thử lại câu trả lời →
+                                </button>
+                            </div>
+                        )}
+
+                        {/* ── Verification questions form ── */}
+                        {!isOwner && post.type === "FOUND" && post.status === "ACTIVE" && !claimResult && (
+                            <section className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm overflow-hidden">
+                                {/* Header */}
+                                <div className="px-6 py-4 border-b border-outline-variant/20 bg-primary/5">
+                                    <h2 className="text-[17px] font-bold text-on-surface flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[20px] text-primary">quiz</span>
+                                        Trả lời câu hỏi xác minh
+                                    </h2>
+                                    <p className="text-[13px] text-on-surface-variant mt-0.5">
+                                        Người nhặt đã đặt câu hỏi để xác nhận bạn là chủ nhân thật sự của đồ vật.
+                                    </p>
+                                </div>
+
+                                <div className="p-6 space-y-6">
+                                    {verificationError && (
+                                        <div className="p-3 bg-error-container text-on-error-container rounded-xl text-[13px] flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[18px]">error</span>
+                                            <span>{verificationError}</span>
+                                        </div>
+                                    )}
+
+                                    {questionsLoading ? (
+                                        <div className="flex items-center justify-center gap-2 py-8 text-on-surface-variant">
+                                            <span className="material-symbols-outlined animate-spin text-[24px] text-primary">progress_activity</span>
+                                            <span className="text-[14px]">Đang tải câu hỏi...</span>
+                                        </div>
+                                    ) : questionsList.length === 0 ? (
+                                        <div className="text-center py-8 text-on-surface-variant">
+                                            <span className="material-symbols-outlined text-[40px] mb-2 block text-outline">help_outline</span>
+                                            <p className="text-[14px]">Bài viết này chưa có câu hỏi xác minh.</p>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleVerifySubmit} className="space-y-6">
+                                            {questionsList.map((q, idx) => (
+                                                <div key={q.id || idx} className="space-y-2.5">
+                                                    <label className="flex items-start gap-2 text-[14px] font-semibold text-on-surface">
+                                                        <span className="mt-0.5 w-6 h-6 rounded-full bg-primary text-on-primary text-[12px] font-bold flex items-center justify-center flex-shrink-0">
+                                                            {idx + 1}
+                                                        </span>
+                                                        {q.question}
+                                                    </label>
+                                                    <textarea
+                                                        value={answers[idx] || ""}
+                                                        onChange={(e) => handleAnswerChange(idx, e.target.value)}
+                                                        rows={4}
+                                                        required
+                                                        placeholder="Nhập câu trả lời của bạn..."
+                                                        className="w-full p-4 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[14px] leading-relaxed outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                                                    />
+                                                </div>
+                                            ))}
+
+                                            <button
+                                                type="submit"
+                                                disabled={verificationLoading}
+                                                className="w-full py-4 bg-primary text-on-primary hover:opacity-90 disabled:opacity-50 rounded-xl text-[15px] font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                            >
+                                                {verificationLoading ? (
+                                                    <>
+                                                        <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                                                        Đang xác minh...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="material-symbols-outlined text-[20px]">verified</span>
+                                                        Gửi câu trả lời xác minh
+                                                    </>
+                                                )}
+                                            </button>
+                                        </form>
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* If owner */}
+                        {isOwner && (
+                            <section className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm p-6 text-center space-y-3">
+                                <span className="material-symbols-outlined text-[40px] text-primary">admin_panel_settings</span>
+                                <p className="font-bold text-on-surface text-[15px]">Đây là bài viết của bạn</p>
+                                <p className="text-[13px] text-on-surface-variant">Bạn có thể quản lý bài viết này từ trang hồ sơ cá nhân.</p>
+                            </section>
+                        )}
+
+                        {/* Safety Tips */}
+                        <section className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl">
+                            <h4 className="font-bold text-amber-800 text-[14px] flex items-center gap-1.5 mb-2">
+                                <span className="material-symbols-outlined text-[18px] text-amber-700">security</span>
+                                Nguyên tắc an toàn
+                            </h4>
+                            <p className="text-[13px] text-amber-900/80 leading-relaxed">
+                                Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
+                            </p>
+                        </section>
+                    </div>
+                </div>
+            </main>
         </div>
     );
 }
