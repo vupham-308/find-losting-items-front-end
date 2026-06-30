@@ -10,6 +10,14 @@ import TermsOfServicePage from "../pages/Home/TermsOfService.jsx"
 import PrivacyPolicyPage from "../pages/Home/PrivacyPolicy.jsx"
 import SearchImagePage from "../pages/Home/SearchImage.jsx"
 
+// Admin
+import RequireAdmin from "../components/auth/RequireAdmin.jsx"
+import AdminLayout from "../pages/Admin/AdminLayout.jsx"
+import DashboardPage from "../pages/Admin/DashboardPage.jsx"
+import UserManagementPage from "../pages/Admin/UserManagementPage.jsx"
+import PostManagementPage from "../pages/Admin/PostManagementPage.jsx"
+import SystemPage from "../pages/Admin/SystemPage.jsx"
+
 export default function AppRoutes() {
     return (
         <Routes>
@@ -23,6 +31,21 @@ export default function AppRoutes() {
             <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/search-image" element={<SearchImagePage />} />
+
+            {/* Admin Dashboard */}
+            <Route
+                path="/admin"
+                element={
+                    <RequireAdmin>
+                        <AdminLayout />
+                    </RequireAdmin>
+                }
+            >
+                <Route index element={<DashboardPage />} />
+                <Route path="users" element={<UserManagementPage />} />
+                <Route path="posts" element={<PostManagementPage />} />
+                <Route path="system" element={<SystemPage />} />
+            </Route>
         </Routes>
     )
 }

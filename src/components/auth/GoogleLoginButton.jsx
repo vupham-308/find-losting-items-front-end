@@ -50,8 +50,13 @@ export default function GoogleLoginButton({ onError }) {
                     client_id: CLIENT_ID,
                     callback: async (response) => {
                         try {
-                            await googleLogin({ idToken: response.credential })
-                            navigate("/")
+                            const user = await googleLogin({ idToken: response.credential })
+                            // Phân quyền: Admin → /admin, User → /
+                            if (user?.userType === "ADMIN") {
+                                navigate("/admin")
+                            } else {
+                                navigate("/")
+                            }
                         } catch (e) {
                             onError?.(e.message || "Đăng nhập Google thất bại")
                         }

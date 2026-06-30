@@ -35,9 +35,14 @@ axiosClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
-        // Nếu lỗi 401 và chưa retry → thử refresh token
+        // Nếu lỗi 401 và chưa retry → thử refresh token.
+        // Chỉ refresh khi đang có token (tức là từng có phiên, có thể đã hết hạn).
+        // Nếu chưa đăng nhập (không có token), refresh chắc chắn vô nghĩa và còn ném
+        // "Network Error" (backend không bật Access-Control-Allow-Credentials) → bỏ qua,
+        // để lỗi 401 thật của backend được hiển thị thay vì "Network Error".
         if (
             error.response?.status === 401 &&
+            useAuthStore.getState().token &&
             !originalRequest._retry &&
             originalRequest.url !== AUTH_ENDPOINTS.refreshToken &&
             originalRequest.url !== AUTH_ENDPOINTS.login

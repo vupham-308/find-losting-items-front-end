@@ -11,11 +11,11 @@ export default function Header() {
         <header className="sticky top-0 w-full z-50 flex justify-between items-center px-gutter-desktop py-stack-sm bg-surface-container-lowest shadow-sm">
             {/* Logo */}
             <Link to={"/"}>
-            <div className="flex items-center gap-2">
-                <img src="/logo.svg" className="h-8 w-8 object-contain" alt="logo" />
-                <span className="text-[20px] font-bold text-primary">Sài Gòn Tìm Đồ</span>
-            </div>
-        </Link>
+                <div className="flex items-center gap-2">
+                    <img src="/logo.svg" className="h-8 w-8 object-contain" alt="logo" />
+                    <span className="text-[20px] font-bold text-primary">Sài Gòn Tìm Đồ</span>
+                </div>
+            </Link>
 
             {/* Right side */}
             <div className="flex items-center gap-stack-sm">
@@ -24,13 +24,13 @@ export default function Header() {
                 {/* Auth: chưa login */}
                 {!user && (
                     <div className="flex items-center gap-2">
-                    <a
-                        href="/login"
-                        className="px-4 py-2 text-[14px] font-semibold bg-primary text-on-primary rounded-full hover:opacity-90 transition-all"                        >
-                        Đăng nhập
-                    </a>
+                        <a
+                            href="/login"
+                            className="px-4 py-2 text-[14px] font-semibold bg-primary text-on-primary rounded-full hover:opacity-90 transition-all"                        >
+                            Đăng nhập
+                        </a>
                     </div>
-                    )}
+                )}
 
                 {/* Auth: đã login — Account dropdown */}
                 {user && (

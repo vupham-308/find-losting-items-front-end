@@ -73,7 +73,7 @@ export default function ProfilePage() {
 
                 const res = await postService.getMyPosts(params)
                 const apiData = res?.data
-                
+
                 if (apiData && Array.isArray(apiData.content)) {
                     setMyPosts(apiData.content)
                     setMyPostsTotalPages(apiData.totalPages || 0)
@@ -207,10 +207,10 @@ export default function ProfilePage() {
             label: "Ngày tham gia",
             value: profile.createdAt
                 ? new Date(profile.createdAt).toLocaleDateString("vi-VN", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                  })
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                })
                 : "Không rõ",
         },
         {
@@ -269,57 +269,55 @@ export default function ProfilePage() {
                     <div className="relative z-10 px-6 sm:px-8 pb-6">
                         {/* Avatar — absolutely positioned so it overlaps the banner without pushing the name into it */}
                         <div className="absolute -top-14 sm:-top-16 left-1/2 -translate-x-1/2 sm:left-8 sm:translate-x-0 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-surface-container-lowest border-4 border-surface-container-lowest shadow-xl flex items-center justify-center">
-                                {profile.socialLink ? (
-                                    <img
-                                        src={profile.socialLink}
-                                        alt={profile.name}
-                                        className="w-full h-full rounded-full object-cover"
-                                        onError={(e) => {
-                                            e.target.style.display = "none"
-                                            e.target.nextSibling.style.display = "flex"
-                                        }}
-                                    />
-                                ) : null}
-                                <div
-                                    className={`w-full h-full rounded-full flex items-center justify-center text-on-primary ${
-                                        profile.socialLink ? "hidden" : ""
-                                    }`}
-                                    style={{
-                                        background: "linear-gradient(135deg, #005bbf, #1a73e8)",
+                            {profile.socialLink ? (
+                                <img
+                                    src={profile.socialLink}
+                                    alt={profile.name}
+                                    className="w-full h-full rounded-full object-cover"
+                                    onError={(e) => {
+                                        e.target.style.display = "none"
+                                        e.target.nextSibling.style.display = "flex"
                                     }}
-                                >
-                                    <span className="text-[44px] sm:text-[52px] font-bold">
-                                        {profile.name?.charAt(0)?.toUpperCase() || "?"}
-                                    </span>
-                                </div>
+                                />
+                            ) : null}
+                            <div
+                                className={`w-full h-full rounded-full flex items-center justify-center text-on-primary ${profile.socialLink ? "hidden" : ""
+                                    }`}
+                                style={{
+                                    background: "linear-gradient(135deg, #005bbf, #1a73e8)",
+                                }}
+                            >
+                                <span className="text-[44px] sm:text-[52px] font-bold">
+                                    {profile.name?.charAt(0)?.toUpperCase() || "?"}
+                                </span>
                             </div>
+                        </div>
 
-                            {/* Name + meta — padded to clear the avatar (below it on mobile, beside it on desktop) */}
-                            <div className="pt-16 text-center sm:text-left sm:pt-4 sm:pl-40 min-w-0">
-                                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                                    <h2 className="text-[24px] sm:text-[28px] font-bold text-on-surface tracking-tight truncate">
-                                        {profile.name}
-                                    </h2>
-                                    <span
-                                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold ${
-                                            isAdmin
-                                                ? "bg-tertiary text-on-tertiary"
-                                                : "bg-primary text-on-primary"
+                        {/* Name + meta — padded to clear the avatar (below it on mobile, beside it on desktop) */}
+                        <div className="pt-16 text-center sm:text-left sm:pt-4 sm:pl-40 min-w-0">
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                                <h2 className="text-[24px] sm:text-[28px] font-bold text-on-surface tracking-tight truncate">
+                                    {profile.name}
+                                </h2>
+                                <span
+                                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-semibold ${isAdmin
+                                            ? "bg-tertiary text-on-tertiary"
+                                            : "bg-primary text-on-primary"
                                         }`}
-                                    >
-                                        <span className="material-symbols-outlined text-[15px]">
-                                            shield_person
-                                        </span>
-                                        {isAdmin ? "Quản trị viên" : "Người dùng"}
+                                >
+                                    <span className="material-symbols-outlined text-[15px]">
+                                        shield_person
                                     </span>
-                                </div>
-                                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-1 mt-1.5 text-on-surface-variant text-[14px]">
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                                        <span className="truncate">{profile.mail}</span>
-                                    </span>
-                                </div>
+                                    {isAdmin ? "Quản trị viên" : "Người dùng"}
+                                </span>
                             </div>
+                            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-1 mt-1.5 text-on-surface-variant text-[14px]">
+                                <span className="flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-[18px]">mail</span>
+                                    <span className="truncate">{profile.mail}</span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -339,26 +337,23 @@ export default function ProfilePage() {
                             {accountStatus.map((item) => (
                                 <div
                                     key={item.label}
-                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border ${
-                                        item.active
+                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border ${item.active
                                             ? "border-primary/20 bg-primary-fixed/30"
                                             : "border-outline-variant bg-surface-container-low"
-                                    }`}
+                                        }`}
                                 >
                                     <span
-                                        className={`material-symbols-outlined text-[24px] ${
-                                            item.active ? "text-primary" : "text-outline"
-                                        }`}
+                                        className={`material-symbols-outlined text-[24px] ${item.active ? "text-primary" : "text-outline"
+                                            }`}
                                     >
                                         {item.icon}
                                     </span>
                                     <div className="min-w-0">
                                         <p
-                                            className={`text-[14px] font-semibold ${
-                                                item.active
+                                            className={`text-[14px] font-semibold ${item.active
                                                     ? "text-on-primary-fixed"
                                                     : "text-on-surface"
-                                            }`}
+                                                }`}
                                         >
                                             {item.label}
                                         </p>
@@ -409,11 +404,10 @@ export default function ProfilePage() {
                                                 </a>
                                             ) : (
                                                 <p
-                                                    className={`text-[15px] font-medium truncate mt-0.5 ${
-                                                        item.muted
+                                                    className={`text-[15px] font-medium truncate mt-0.5 ${item.muted
                                                             ? "text-outline italic"
                                                             : "text-on-surface"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {item.value}
                                                 </p>
@@ -518,16 +512,14 @@ export default function ProfilePage() {
                                                     {passwordChecks.map((check) => (
                                                         <div key={check.label} className="flex items-center gap-2">
                                                             <span
-                                                                className={`material-symbols-outlined text-[16px] ${
-                                                                    check.valid ? "text-primary" : "text-outline"
-                                                                }`}
+                                                                className={`material-symbols-outlined text-[16px] ${check.valid ? "text-primary" : "text-outline"
+                                                                    }`}
                                                             >
                                                                 {check.valid ? "check_circle" : "radio_button_unchecked"}
                                                             </span>
                                                             <span
-                                                                className={`text-[12px] ${
-                                                                    check.valid ? "text-on-surface font-medium" : "text-outline"
-                                                                }`}
+                                                                className={`text-[12px] ${check.valid ? "text-on-surface font-medium" : "text-outline"
+                                                                    }`}
                                                             >
                                                                 {check.label}
                                                             </span>
@@ -550,13 +542,12 @@ export default function ProfilePage() {
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                                     placeholder="Nhập lại mật khẩu"
-                                                    className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${
-                                                        confirmPassword.length > 0
+                                                    className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${confirmPassword.length > 0
                                                             ? isConfirmMatch
                                                                 ? "border-primary focus:border-primary"
                                                                 : "border-error focus:border-error"
                                                             : "border-outline-variant focus:border-primary"
-                                                    }`}
+                                                        }`}
                                                 />
                                                 <button
                                                     type="button"
@@ -623,7 +614,7 @@ export default function ProfilePage() {
                                 Tin đăng của bạn
                             </h3>
                         </div>
-                        
+
                         {/* Filters Controls */}
                         <div className="flex flex-wrap items-center gap-3">
                             {/* Type Filter */}
@@ -710,12 +701,12 @@ export default function ProfilePage() {
                                     const isLost = post.type === "LOST";
                                     const formattedDate = post.created_at || post.createdAt
                                         ? new Date(post.created_at || post.createdAt).toLocaleDateString("vi-VN", {
-                                              year: "numeric",
-                                              month: "long",
-                                              day: "numeric",
-                                          })
+                                            year: "numeric",
+                                            month: "long",
+                                            day: "numeric",
+                                        })
                                         : "Không rõ ngày";
-                                    
+
                                     return (
                                         <div
                                             key={post.id}
@@ -733,9 +724,8 @@ export default function ProfilePage() {
                                                     }}
                                                 />
                                                 {/* Type overlay badge */}
-                                                <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white shadow ${
-                                                    isLost ? "bg-red-500" : "bg-indigo-600"
-                                                }`}>
+                                                <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white shadow ${isLost ? "bg-red-500" : "bg-indigo-600"
+                                                    }`}>
                                                     {isLost ? "LOST" : "FOUND"}
                                                 </span>
                                             </div>
@@ -745,16 +735,15 @@ export default function ProfilePage() {
                                                 <div>
                                                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                                         {/* Status Badge */}
-                                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                                                            post.status === "ACTIVE"
+                                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${post.status === "ACTIVE"
                                                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                                                                 : post.status === "RESOLVED"
-                                                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                                                                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
-                                                        }`}>
+                                                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                                                            }`}>
                                                             {post.status === "ACTIVE" ? "Đang hoạt động" : post.status === "RESOLVED" ? "Đã giải quyết" : "Đã xóa"}
                                                         </span>
-                                                        
+
                                                         {/* Location */}
                                                         {(post.location?.district || post.district) && (
                                                             <span className="flex items-center gap-0.5 text-xs text-on-surface-variant">
@@ -773,7 +762,7 @@ export default function ProfilePage() {
                                                     <h4 className="text-[16px] font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1 mb-1">
                                                         {post.title}
                                                     </h4>
-                                                    
+
                                                     {post.description && (
                                                         <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
                                                             {post.description}

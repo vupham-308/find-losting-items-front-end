@@ -8,7 +8,7 @@ const BARE_ROUTES = ["/login", "/register", "/forgot-password"]
 
 export default function App() {
     const { pathname } = useLocation()
-    const hideChrome = BARE_ROUTES.includes(pathname)
+    const hideChrome = BARE_ROUTES.includes(pathname) || pathname.startsWith("/admin")
 
     return (
         <div className="bg-background min-h-screen text-on-background font-sans">
