@@ -5,7 +5,7 @@ import { AUTH_ENDPOINTS } from "./endpoints.js"
 // Instance axios dùng chung cho toàn app.
 // baseURL để rỗng khi dev (request /api đi qua Vite proxy); đặt VITE_API_URL khi build production.
 const axiosClient = axios.create({
-    baseURL: import.meta.env.VITE_API_URL ?? "",
+    baseURL: "https://sba301-lost-and-found-backend.onrender.com",
     headers: { "Content-Type": "application/json" },
 })
 

@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
-import { api } from "../services/api";
+import { usePost } from "../../hooks/usePost";
+import PostDetailModal from "../../components/post/PostDetailModal.jsx";
 
 const HCMC_DISTRICTS = [
   "Tất cả khu vực",
@@ -26,7 +27,7 @@ const formatEventTime = (isoString) => {
     }
 };
 
-function ItemCard({ item }) {
+function ItemCard({ item, onClick }) {
     const type = item.type || "LOST";
     const imgUrl = item.image_url || item.imageUrl || item.image || (item.images && item.images.length > 0 ? item.images[0] : null) || "https://placehold.co/600x400?text=No+Image";
     const districtName = item.location?.district || item.district || "Không rõ khu vực";
@@ -36,8 +37,7 @@ function ItemCard({ item }) {
     const matchPercent = scoreVal % 1 === 0 ? scoreVal.toFixed(0) : scoreVal.toFixed(1);
 
     return (
-        <Link to={`/posts/${item.id}`}>
-            <div className="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group flex flex-col justify-between h-full">
+        <div onClick={onClick} className="cursor-pointer bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group flex flex-col justify-between h-full">
                 <div>
                     <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
                         <img
@@ -68,140 +68,29 @@ function ItemCard({ item }) {
                     </div>
                 </div>
             </div>
-        </Link>
     );
 }
 
 export default function HomePage() {
     const navigate = useNavigate();
-    const [postsList, setPostsList] = useState([]);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
-    const [activeType, setActiveType] = useState('LOST');
-    const [activeDistrict, setActiveDistrict] = useState('Tất cả khu vực');
-    const [isLoading, setIsLoading] = useState(true);
-
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearchResult, setIsSearchResult] = useState(false);
-
-    useEffect(() => {
-        // Reset page to 0 when filters change
-        setPage(0);
-    }, [activeType, activeDistrict]);
-
-    const fetchPosts = async () => {
-        setIsLoading(true);
-        try {
-            let url = `/api/v1/posts/all?page=${page}&size=18&sortBy=createdAt&sortDir=DESC&type=${activeType}&status=ACTIVE`;
-            if (activeDistrict && activeDistrict !== 'Tất cả khu vực') {
-                url += `&district=${encodeURIComponent(activeDistrict)}`;
-            }
-            const response = await api.get(url, { auth: true });
-            const apiData = response?.data;
-            
-            let contentList = [];
-            if (apiData && Array.isArray(apiData.content)) {
-                contentList = apiData.content;
-            } else if (Array.isArray(apiData)) {
-                contentList = apiData;
-            } else if (response && Array.isArray(response.content)) {
-                contentList = response.content;
-            } else if (Array.isArray(response)) {
-                contentList = response;
-            }
-
-            setPostsList(contentList);
-            setTotalPages(apiData?.totalPages || 1);
-        } catch (err) {
-            console.error("Lỗi khi tải bài đăng với bộ lọc, thử tải không có quận huyện:", err);
-            try {
-                let url = `/api/v1/posts/all?page=${page}&size=18&sortBy=createdAt&sortDir=DESC&type=${activeType}&status=ACTIVE`;
-                const response = await api.get(url, { auth: true });
-                const apiData = response?.data;
-                
-                let contentList = [];
-                if (apiData && Array.isArray(apiData.content)) {
-                    contentList = apiData.content;
-                } else if (Array.isArray(apiData)) {
-                    contentList = apiData;
-                } else if (response && Array.isArray(response.content)) {
-                    contentList = response.content;
-                } else if (Array.isArray(response)) {
-                    contentList = response;
-                }
-                
-                if (activeDistrict && activeDistrict !== 'Tất cả khu vực') {
-                    contentList = contentList.filter(item => {
-                        const dName = item.location?.district || item.district;
-                        return dName === activeDistrict;
-                    });
-                }
-                setPostsList(contentList);
-                setTotalPages(apiData?.totalPages || 1);
-            } catch (fallbackErr) {
-                console.error("Lỗi hoàn toàn khi tải danh sách bài đăng:", fallbackErr);
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const executeSearch = async () => {
-        if (!searchQuery.trim()) {
-            setIsSearchResult(false);
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const response = await api.post('/api/v1/posts/search/text', {
-                text: searchQuery,
-                query: searchQuery,
-                top_k: 20,
-                target_type: activeType
-            }, { auth: true });
-
-            const apiData = response?.data;
-            let results = [];
-            
-            if (apiData && Array.isArray(apiData.results)) {
-                results = apiData.results;
-            } else if (Array.isArray(apiData)) {
-                results = apiData;
-            } else if (apiData && Array.isArray(apiData.content)) {
-                results = apiData.content;
-            } else if (apiData && Array.isArray(apiData.posts)) {
-                results = apiData.posts;
-            } else if (response && Array.isArray(response.results)) {
-                results = response.results;
-            } else if (Array.isArray(response)) {
-                results = response;
-            } else if (response && Array.isArray(response.content)) {
-                results = response.content;
-            } else if (response && Array.isArray(response.posts)) {
-                results = response.posts;
-            }
-
-            // Normalize search results keys (mapping post_id -> id and blurred_image_url -> image_url)
-            // Filter out items with 0% match score (match_score === 0)
-            const normalizedResults = results
-                .filter(item => item.match_score !== 0 && item.match_score !== "0")
-                .map(item => ({
-                    ...item,
-                    id: item.post_id || item.id,
-                    image_url: item.blurred_image_url || item.original_image_url || item.image_url || item.imageUrl,
-                    created_at: item.created_at || item.event_time
-                }));
-
-            setPostsList(normalizedResults);
-            setTotalPages(1);
-        } catch (err) {
-            console.error("Lỗi khi tìm kiếm semantic:", err);
-            setPostsList([]);
-            setTotalPages(1);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    const [selectedPostId, setSelectedPostId] = useState(null);
+    const {
+        postsList,
+        currentPage,
+        totalPages,
+        activeType,
+        activeDistrict,
+        isLoading,
+        searchQuery,
+        isSearchResult,
+        setActiveType,
+        setActiveDistrict,
+        setCurrentPage,
+        setSearchQuery,
+        fetchPosts,
+        executeSearch,
+        clearSearch
+    } = usePost();
 
     useEffect(() => {
         if (isSearchResult) {
@@ -209,23 +98,14 @@ export default function HomePage() {
         } else {
             fetchPosts();
         }
-    }, [page, activeType, activeDistrict, isSearchResult]);
+    }, [currentPage, activeType, activeDistrict, isSearchResult]);
 
     const handleSearchSubmit = () => {
-        if (!searchQuery.trim()) {
-            setIsSearchResult(false);
-            return;
-        }
-        if (isSearchResult) {
-            executeSearch();
-        } else {
-            setIsSearchResult(true);
-        }
+        executeSearch();
     };
 
     const handleClearSearch = () => {
-        setSearchQuery('');
-        setIsSearchResult(false);
+        clearSearch();
     };
 
     const handleLostReport = () => {
@@ -235,7 +115,6 @@ export default function HomePage() {
     const handleFoundReport = () => {
         navigate('/create-post?mode=found');
     };
-
     return (
         <main className="max-w-[1200px] mx-auto px-gutter-desktop pb-16">
             {/* Hero */}
@@ -399,7 +278,7 @@ export default function HomePage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-stack-md">
-                            {postsList.map(item => <ItemCard key={item.id} item={item} />)}
+                            {postsList.map(item => <ItemCard key={item.id} item={item} onClick={() => setSelectedPostId(item.id)} />)}
                         </div>
                     )}
 
@@ -407,18 +286,18 @@ export default function HomePage() {
                     {!isLoading && totalPages > 1 && (
                         <div className="flex justify-center items-center gap-2 mt-stack-lg">
                             <button
-                                disabled={page === 0}
-                                onClick={() => setPage(prev => Math.max(0, prev - 1))}
+                                disabled={currentPage === 0}
+                                onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
                                 className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-50 disabled:pointer-events-none hover:bg-surface-container cursor-pointer"
                             >
                                 Trang trước
                             </button>
                             <span className="text-xs font-bold text-on-surface-variant px-2">
-                                Trang {page + 1} / {totalPages}
+                                Trang {currentPage + 1} / {totalPages}
                             </span>
                             <button
-                                disabled={page >= totalPages - 1}
-                                onClick={() => setPage(prev => prev + 1)}
+                                disabled={currentPage >= totalPages - 1}
+                                onClick={() => setCurrentPage(currentPage + 1)}
                                 className="px-4 py-2 rounded-lg border border-outline-variant text-xs font-bold disabled:opacity-50 disabled:pointer-events-none hover:bg-surface-container cursor-pointer"
                             >
                                 Trang sau
@@ -444,6 +323,13 @@ export default function HomePage() {
                     </div>
                 </section>
             </div>
+            {selectedPostId && (
+                <PostDetailModal
+                    postId={selectedPostId}
+                    onClose={() => setSelectedPostId(null)}
+                    onActionComplete={isSearchResult ? executeSearch : fetchPosts}
+                />
+            )}
         </main>
     );
 }

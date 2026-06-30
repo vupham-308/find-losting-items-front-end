@@ -2,6 +2,8 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth.js"
 import * as authService from "../../services/authService.js"
+import * as postService from "../../services/postService.js"
+import PostDetailModal from "../../components/post/PostDetailModal.jsx"
 
 export default function ProfilePage() {
     const navigate = useNavigate()
@@ -37,6 +39,87 @@ export default function ProfilePage() {
         }
         fetchProfile()
     }, [user, navigate])
+
+    // User posts states
+    const [myPosts, setMyPosts] = useState([])
+    const [myPostsLoading, setMyPostsLoading] = useState(true)
+    const [myPostsError, setMyPostsError] = useState("")
+    const [myPostsPage, setMyPostsPage] = useState(0)
+    const [myPostsTotalPages, setMyPostsTotalPages] = useState(0)
+    const [myPostsSortDir, setMyPostsSortDir] = useState("DESC")
+    const [myPostsType, setMyPostsType] = useState("")
+    const [myPostsStatus, setMyPostsStatus] = useState("")
+
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
+    const [updatingPostId, setUpdatingPostId] = useState(null)
+    const [deletingPostId, setDeletingPostId] = useState(null)
+    const [selectedPostId, setSelectedPostId] = useState(null)
+
+    useEffect(() => {
+        if (!user) return
+
+        const fetchMyPosts = async () => {
+            setMyPostsLoading(true)
+            setMyPostsError("")
+            try {
+                const params = {
+                    page: myPostsPage,
+                    size: 6,
+                    sortBy: "createdAt",
+                    sortDir: myPostsSortDir,
+                }
+                if (myPostsType) params.type = myPostsType
+                if (myPostsStatus) params.status = myPostsStatus
+
+                const res = await postService.getMyPosts(params)
+                const apiData = res?.data
+                
+                if (apiData && Array.isArray(apiData.content)) {
+                    setMyPosts(apiData.content)
+                    setMyPostsTotalPages(apiData.totalPages || 0)
+                } else {
+                    setMyPosts([])
+                    setMyPostsTotalPages(0)
+                }
+            } catch (err) {
+                setMyPostsError(err.message || "Không thể tải danh sách bài đăng của bạn")
+            } finally {
+                setMyPostsLoading(false)
+            }
+        }
+
+        fetchMyPosts()
+    }, [user, myPostsPage, myPostsSortDir, myPostsType, myPostsStatus, refreshTrigger])
+
+    const handleUpdateStatus = async (postId, newStatus) => {
+        if (!window.confirm("Bạn có chắc chắn muốn đánh dấu bài viết này là đã giải quyết?")) {
+            return;
+        }
+        setUpdatingPostId(postId)
+        try {
+            await postService.updatePostStatus(postId, newStatus)
+            setRefreshTrigger(prev => prev + 1)
+        } catch (err) {
+            alert(err.message || "Không thể cập nhật trạng thái bài đăng")
+        } finally {
+            setUpdatingPostId(null)
+        }
+    }
+
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm("Bạn có chắc chắn muốn xóa bài đăng này không? Hành động này không thể hoàn tác.")) {
+            return;
+        }
+        setDeletingPostId(postId)
+        try {
+            await postService.deletePost(postId)
+            setRefreshTrigger(prev => prev + 1)
+        } catch (err) {
+            alert(err.message || "Không thể xóa bài đăng")
+        } finally {
+            setDeletingPostId(null)
+        }
+    }
 
     // Password validation
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/
@@ -234,10 +317,6 @@ export default function ProfilePage() {
                                     <span className="flex items-center gap-1.5">
                                         <span className="material-symbols-outlined text-[18px]">mail</span>
                                         <span className="truncate">{profile.mail}</span>
-                                    </span>
-                                    <span className="flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-[18px]">badge</span>
-                                        ID #{profile.id}
                                     </span>
                                 </div>
                             </div>
@@ -532,7 +611,259 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </div>
+
+                {/* User Posts Section */}
+                <div className="mt-8 bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6 text-left">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-4 border-b border-outline-variant/30">
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-[24px]">
+                                list_alt
+                            </span>
+                            <h3 className="text-[18px] font-bold text-on-surface">
+                                Tin đăng của bạn
+                            </h3>
+                        </div>
+                        
+                        {/* Filters Controls */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Type Filter */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider">Phân loại</span>
+                                <select
+                                    value={myPostsType}
+                                    onChange={(e) => {
+                                        setMyPostsType(e.target.value);
+                                        setMyPostsPage(0);
+                                    }}
+                                    className="px-3 py-1.5 bg-surface-container-low border border-outline-variant/50 rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary"
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="LOST">LOST</option>
+                                    <option value="FOUND">FOUND</option>
+                                </select>
+                            </div>
+
+                            {/* Status Filter */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider">Trạng thái</span>
+                                <select
+                                    value={myPostsStatus}
+                                    onChange={(e) => {
+                                        setMyPostsStatus(e.target.value);
+                                        setMyPostsPage(0);
+                                    }}
+                                    className="px-3 py-1.5 bg-surface-container-low border border-outline-variant/50 rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary"
+                                >
+                                    <option value="">Tất cả</option>
+                                    <option value="ACTIVE">Hoạt động</option>
+                                    <option value="RESOLVED">Đã giải quyết</option>
+                                    <option value="DELETED">Đã xóa</option>
+                                </select>
+                            </div>
+
+                            {/* Sort Dir Filter */}
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider">Sắp xếp ngày</span>
+                                <select
+                                    value={myPostsSortDir}
+                                    onChange={(e) => {
+                                        setMyPostsSortDir(e.target.value);
+                                        setMyPostsPage(0);
+                                    }}
+                                    className="px-3 py-1.5 bg-surface-container-low border border-outline-variant/50 rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary"
+                                >
+                                    <option value="DESC">Mới nhất</option>
+                                    <option value="ASC">Cũ nhất</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Posts List */}
+                    {myPostsLoading ? (
+                        <div className="py-12 flex flex-col items-center justify-center gap-3">
+                            <span className="material-symbols-outlined text-primary text-[36px] animate-spin">
+                                progress_activity
+                            </span>
+                            <p className="text-on-surface-variant text-sm">Đang tải danh sách bài đăng...</p>
+                        </div>
+                    ) : myPostsError ? (
+                        <div className="py-8 px-4 text-center bg-red-50 border border-red-100 rounded-xl text-red-800 text-sm">
+                            {myPostsError}
+                        </div>
+                    ) : myPosts.length === 0 ? (
+                        <div className="text-center py-16 bg-surface-container-low rounded-xl border border-dashed border-outline-variant/50">
+                            <span className="material-symbols-outlined text-[40px] text-outline mb-1">
+                                folder_open
+                            </span>
+                            <h4 className="text-[16px] font-bold text-on-surface mb-1">
+                                Không tìm thấy bài viết nào
+                            </h4>
+                            <p className="text-on-surface-variant text-xs max-w-sm mx-auto">
+                                Bạn chưa đăng tin nào hoặc không có tin đăng nào phù hợp với bộ lọc đã chọn.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div className="grid gap-4">
+                                {myPosts.map((post) => {
+                                    const isLost = post.type === "LOST";
+                                    const formattedDate = post.created_at || post.createdAt
+                                        ? new Date(post.created_at || post.createdAt).toLocaleDateString("vi-VN", {
+                                              year: "numeric",
+                                              month: "long",
+                                              day: "numeric",
+                                          })
+                                        : "Không rõ ngày";
+                                    
+                                    return (
+                                        <div
+                                            key={post.id}
+                                            onClick={() => setSelectedPostId(post.id)}
+                                            className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl border border-outline-variant/40 bg-surface-container-low/30 hover:bg-surface-container-low/80 transition-all group text-left cursor-pointer"
+                                        >
+                                            {/* Left: Image */}
+                                            <div className="w-full sm:w-28 h-28 rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-outline-variant/20 relative">
+                                                <img
+                                                    src={post.blurred_image_url || post.original_image_url || post.image_url || "https://placehold.co/400?text=No+Image"}
+                                                    alt={post.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    onError={(e) => {
+                                                        e.target.src = "https://placehold.co/400?text=No+Image";
+                                                    }}
+                                                />
+                                                {/* Type overlay badge */}
+                                                <span className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white shadow ${
+                                                    isLost ? "bg-red-500" : "bg-indigo-600"
+                                                }`}>
+                                                    {isLost ? "LOST" : "FOUND"}
+                                                </span>
+                                            </div>
+
+                                            {/* Right: Info */}
+                                            <div className="flex-grow flex flex-col justify-between min-w-0">
+                                                <div>
+                                                    <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                                                        {/* Status Badge */}
+                                                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                                            post.status === "ACTIVE"
+                                                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                                                : post.status === "RESOLVED"
+                                                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                                                                : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                                                        }`}>
+                                                            {post.status === "ACTIVE" ? "Đang hoạt động" : post.status === "RESOLVED" ? "Đã giải quyết" : "Đã xóa"}
+                                                        </span>
+                                                        
+                                                        {/* Location */}
+                                                        {(post.location?.district || post.district) && (
+                                                            <span className="flex items-center gap-0.5 text-xs text-on-surface-variant">
+                                                                <span className="material-symbols-outlined text-[14px]">location_on</span>
+                                                                {post.location?.district || post.district}
+                                                            </span>
+                                                        )}
+
+                                                        {/* Date */}
+                                                        <span className="flex items-center gap-0.5 text-xs text-on-surface-variant sm:ml-auto">
+                                                            <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                                                            {formattedDate}
+                                                        </span>
+                                                    </div>
+
+                                                    <h4 className="text-[16px] font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1 mb-1">
+                                                        {post.title}
+                                                    </h4>
+                                                    
+                                                    {post.description && (
+                                                        <p className="text-xs text-on-surface-variant line-clamp-2 leading-relaxed">
+                                                            {post.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-4 flex items-center justify-end gap-2">
+                                                    {post.type === "FOUND" && post.status === "ACTIVE" && (
+                                                        <button
+                                                            disabled={updatingPostId === post.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleUpdateStatus(post.id, "RESOLVED");
+                                                            }}
+                                                            className="px-3.5 py-1.5 bg-primary hover:brightness-110 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-all cursor-pointer shadow flex items-center gap-1"
+                                                        >
+                                                            {updatingPostId === post.id ? (
+                                                                <>
+                                                                    <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                                                                    Đang xử lý
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                    Đã trả lại đồ
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                    {post.status !== "DELETED" && (
+                                                        <button
+                                                            disabled={deletingPostId === post.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeletePost(post.id);
+                                                            }}
+                                                            className="w-8 h-8 border border-red-200 hover:bg-red-50 hover:text-red-700 rounded-lg text-red-600 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50"
+                                                            title="Xóa bài viết"
+                                                        >
+                                                            {deletingPostId === post.id ? (
+                                                                <span className="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Pagination Controls */}
+                            {myPostsTotalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-4 border-t border-outline-variant/30">
+                                    <button
+                                        disabled={myPostsPage === 0}
+                                        onClick={() => setMyPostsPage((prev) => Math.max(0, prev - 1))}
+                                        className="flex items-center justify-center p-2 rounded-lg border border-outline-variant hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                                        title="Trang trước"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                                    </button>
+                                    <span className="text-xs text-on-surface-variant font-medium px-2">
+                                        Trang {myPostsPage + 1} / {myPostsTotalPages}
+                                    </span>
+                                    <button
+                                        disabled={myPostsPage >= myPostsTotalPages - 1}
+                                        onClick={() => setMyPostsPage((prev) => prev + 1)}
+                                        className="flex items-center justify-center p-2 rounded-lg border border-outline-variant hover:bg-surface-container-high disabled:opacity-40 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                                        title="Trang sau"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
+
+            {selectedPostId && (
+                <PostDetailModal
+                    postId={selectedPostId}
+                    onClose={() => setSelectedPostId(null)}
+                    onActionComplete={() => setRefreshTrigger((prev) => prev + 1)}
+                />
+            )}
         </div>
     )
 }

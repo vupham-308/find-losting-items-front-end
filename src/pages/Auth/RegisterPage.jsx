@@ -87,9 +87,7 @@ export default function RegisterPage() {
 
                 {/* Logo + tên */}
                 <div className="relative flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[26px]">travel_explore</span>
-                    </div>
+                    <img src="/logo.svg" className="h-11 w-11 object-contain bg-white/10 backdrop-blur rounded-xl p-1" alt="logo" />
                     <span className="text-[22px] font-bold tracking-tight">Sài Gòn Tìm Đồ</span>
                 </div>
 
@@ -133,9 +131,8 @@ export default function RegisterPage() {
                 {/* Nút quay về đăng nhập */}
                 <Link
                     to="/login"
-                    className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
+                    className="absolute top-6 right-6 inline-flex items-center gap-1 px-4 py-1.5 border border-primary text-primary hover:bg-primary/5 rounded-full text-[14px] font-semibold transition-colors"
                 >
-                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                     Đăng nhập
                 </Link>
 
@@ -143,9 +140,7 @@ export default function RegisterPage() {
 
                     {/* Logo cho mobile */}
                     <div className="flex lg:hidden items-center justify-center gap-2 mb-stack-lg">
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary">
-                            <span className="material-symbols-outlined">travel_explore</span>
-                        </div>
+                        <img src="/logo.svg" className="h-10 w-10 object-contain" alt="logo" />
                         <span className="text-[20px] font-bold text-primary tracking-tight">Sài Gòn Tìm Đồ</span>
                     </div>
 
