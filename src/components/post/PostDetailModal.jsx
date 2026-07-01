@@ -89,7 +89,7 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
             {/* Click outside to close */}
             <div className="absolute inset-0" onClick={onClose} />
 
-            <div className="bg-surface-container-lowest rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-outline-variant/30 text-left relative flex flex-col z-10 animate-in fade-in zoom-in duration-200">
+            <div className="bg-surface-container-lowest rounded-2xl max-w-5xl w-full max-h-[110vh] overflow-y-auto shadow-2xl border border-outline-variant/30 text-left relative flex flex-col z-10 animate-in fade-in zoom-in duration-200">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -115,9 +115,9 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                         </button>
                     </div>
                 ) : (
-                    <div className="flex flex-col md:flex-row min-h-[400px]">
+                    <div className="flex flex-col md:flex-row min-h-[480px]">
                         {/* Left Column: Image */}
-                        <div className="w-full md:w-[45%] bg-surface-container-low relative min-h-[250px] md:min-h-full flex items-center justify-center">
+                        <div className="w-full md:w-[45%] bg-surface-container-low relative min-h-[400px] md:min-h-full flex items-center justify-center">
                             {post.image_url || post.blurred_image_url ? (
                                 <img
                                     src={post.image_url || post.blurred_image_url}
@@ -134,11 +134,11 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                         </div>
 
                         {/* Right Column: Information */}
-                        <div className="w-full md:w-[55%] p-6 flex flex-col justify-between">
-                            <div>
+                        <div className="w-full md:w-[55%] p-5 flex flex-col justify-between gap-3">
+                            <div className="space-y-2.5">
                                 {/* Badges */}
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
+                                <div className="flex flex-wrap gap-1.5">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider ${
                                         post.type === "LOST"
                                             ? "bg-error-container text-on-error-container border border-error/20"
                                             : "bg-primary-container text-on-primary-container border border-primary/20"
@@ -147,7 +147,7 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     </span>
                                     
                                     {post.status && (
-                                        <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider ${
                                             post.status === "ACTIVE"
                                                 ? "bg-success/10 text-success border border-success/30"
                                                 : post.status === "RESOLVED"
@@ -159,79 +159,76 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     )}
                                 </div>
 
-                                <h2 className="text-[22px] font-bold text-on-surface leading-snug mb-3 pr-8">
+                                <h2 className="text-[19px] font-bold text-on-surface leading-snug pr-8">
                                     {post.title}
                                 </h2>
 
-                                <div className="flex flex-wrap gap-x-4 gap-y-2 text-on-surface-variant text-[13px] border-b border-outline-variant/50 pb-3 mb-4">
+                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-on-surface-variant text-[12px] border-b border-outline-variant/30 pb-2">
                                     <div className="flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[16px]">location_on</span>
+                                        <span className="material-symbols-outlined text-[14px]">location_on</span>
                                         <span>{post.location?.district || post.district || "Chưa xác định"}</span>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
                                         <span>
                                             {post.created_at ? new Date(post.created_at).toLocaleString("vi-VN", {
                                                 year: 'numeric', month: '2-digit', day: '2-digit'
-                                            }) : "Chưa rõ thời gian"}
+                                            }) : "Chưa rõ"}
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {/* Description */}
-                                    <div>
-                                        <h4 className="text-[12px] font-bold text-primary uppercase tracking-wider mb-1">Mô tả vật phẩm</h4>
-                                        <p className="text-on-surface text-[14px] leading-relaxed whitespace-pre-line bg-surface-container-low/50 p-3 rounded-xl border border-outline-variant/20">
-                                            {post.description || "Không có mô tả chi tiết."}
-                                        </p>
-                                    </div>
+                                {/* Description */}
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1">Mô tả vật phẩm</h4>
+                                    <p className="text-on-surface text-[13px] leading-relaxed whitespace-pre-line bg-surface-container-low/50 px-3 py-2 rounded-xl border border-outline-variant/20 line-clamp-3">
+                                        {post.description || "Không có mô tả chi tiết."}
+                                    </p>
+                                </div>
 
-                                    {/* Address Detail */}
-                                    {post.location?.address && (
-                                        <div>
-                                            <h4 className="text-[12px] font-bold text-primary uppercase tracking-wider mb-1">Địa điểm chi tiết</h4>
-                                            <p className="text-on-surface-variant text-[13px]">
-                                                {post.location.address}
+                                {/* Owner Contact */}
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Thông tin liên hệ</h4>
+
+                                    {post.hide_post_type === "WHEN_MATCH" && !isOwner && (
+                                        <div className="flex items-start gap-1.5 mb-1.5 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-2">
+                                            <span className="material-symbols-outlined text-[14px] text-amber-600 mt-0.5 flex-shrink-0">info</span>
+                                            <p className="text-[11px] text-amber-800 leading-snug">
+                                                Thông tin người nhặt sẽ được hiển thị sau khi bạn xác minh thành công
                                             </p>
                                         </div>
                                     )}
-
-                                    {/* Owner Contact */}
-                                    <div className="border-t border-outline-variant/30 pt-3">
-                                        <h4 className="text-[12px] font-bold text-primary uppercase tracking-wider mb-2">Thông tin liên hệ</h4>
-                                        {post.owner ? (
-                                            <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-2 text-[13px]">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="material-symbols-outlined text-[16px] text-primary">person</span>
-                                                    <span className="font-semibold text-on-surface">{post.owner.full_name || post.owner.name || "N/A"}</span>
+                                    {post.owner ? (
+                                        <div className="bg-primary/5 border border-primary/10 rounded-xl px-3 py-2 space-y-1.5 text-[12px]">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[15px] text-primary">person</span>
+                                                <span className="font-semibold text-on-surface">{post.owner.full_name || post.owner.name || "N/A"}</span>
+                                            </div>
+                                            {post.owner.phone && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[15px] text-primary">call</span>
+                                                    <a href={`tel:${post.owner.phone}`} className="text-primary hover:underline font-medium">{post.owner.phone}</a>
                                                 </div>
-                                                {post.owner.phone && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="material-symbols-outlined text-[16px] text-primary">call</span>
-                                                        <a href={`tel:${post.owner.phone}`} className="text-primary hover:underline font-medium">{post.owner.phone}</a>
-                                                    </div>
-                                                )}
-                                                {post.owner.email && (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="material-symbols-outlined text-[16px] text-primary">mail</span>
-                                                        <span className="text-on-surface-variant">{post.owner.email}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="bg-surface-container-low border border-outline-variant/20 rounded-xl p-3 flex items-center gap-2 text-[13px] text-on-surface-variant">
-                                                <span className="material-symbols-outlined text-[16px] text-outline">lock</span>
-                                                <span>Thông tin liên hệ được bảo mật.</span>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                            {post.owner.email && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-[15px] text-primary">mail</span>
+                                                    <span className="text-on-surface-variant">{post.owner.email}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-surface-container-low border border-outline-variant/20 rounded-xl px-3 py-2 flex items-center gap-1.5 text-[12px] text-on-surface-variant">
+                                            <span className="material-symbols-outlined text-[15px] text-outline">lock</span>
+                                            <span>Thông tin liên hệ được bảo mật.</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Action Buttons — no separator */}
                             {isOwner ? (
-                                <div className="mt-6 pt-4 border-t border-outline-variant/50 flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 pt-1">
                                     {post.type === "FOUND" && post.status === "ACTIVE" && (
                                         <button
                                             onClick={handleUpdateStatus}
@@ -263,9 +260,9 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     )}
                                 </div>
                             ) : (
-                                post.type === "FOUND" && (
-                                    <div className="mt-6 pt-4 border-t border-outline-variant/50 space-y-2">
-                                        <p className="text-[12px] text-on-surface-variant text-center font-medium">
+                                post.type === "FOUND" && post.hide_post_type !== "PUBLIC" && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <p className="text-[11px] text-on-surface-variant text-center font-medium">
                                             {post.owner?.phone || post.owner?.email
                                                 ? "Kiểm tra xem có đúng phải đồ bạn mất không"
                                                 : "Xác minh để xem thông tin liên hệ người đăng"
@@ -276,9 +273,9 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                                 onClose();
                                                 navigate(`/posts/${post.post_id || post.id}`);
                                             }}
-                                            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[14px] font-bold shadow-lg active:scale-[0.98] transition-all cursor-pointer"
+                                            className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md active:scale-[0.98] transition-all cursor-pointer"
                                         >
-                                            <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                                            <span className="material-symbols-outlined text-[16px]">verified_user</span>
                                             Kiểm tra ngay
                                         </button>
                                     </div>
@@ -291,3 +288,4 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
         </div>
     );
 }
+

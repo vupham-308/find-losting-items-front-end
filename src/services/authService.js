@@ -7,20 +7,20 @@ import { AUTH_ENDPOINTS } from "../api/endpoints.js"
 // axiosClient đã trả về response.data (envelope dạng { status, message, data, ... })
 
 export function login({ mail, password }) {
-    return axiosClient.post(AUTH_ENDPOINTS.login, { mail, password })
+    return axiosClient.post(AUTH_ENDPOINTS.login, { mail, password }, { withCredentials: true })
 }
 
 export function register({ name, mail, password, phone }) {
-    return axiosClient.post(AUTH_ENDPOINTS.register, { name, mail, password, phone })
+    return axiosClient.post(AUTH_ENDPOINTS.register, { name, mail, password, phone }, { withCredentials: true })
 }
 
 // Đăng nhập/đăng ký bằng Google: gửi idToken lấy từ Google Identity Services.
 export function googleLogin({ idToken }) {
-    return axiosClient.post(AUTH_ENDPOINTS.google, { idToken })
+    return axiosClient.post(AUTH_ENDPOINTS.google, { idToken }, { withCredentials: true })
 }
 
 export function logout() {
-    return axiosClient.post(AUTH_ENDPOINTS.logout)
+    return axiosClient.post(AUTH_ENDPOINTS.logout, null, { withCredentials: true })
 }
 
 // Quên mật khẩu: backend gửi mã OTP tới email.
