@@ -10,6 +10,9 @@ import TermsOfServicePage from "../pages/Home/TermsOfService.jsx"
 import PrivacyPolicyPage from "../pages/Home/PrivacyPolicy.jsx"
 import SearchImagePage from "../pages/Home/SearchImage.jsx"
 
+// Guards
+import RequirePassword from "../components/auth/RequirePassword.jsx"
+
 // Admin
 import RequireAdmin from "../components/auth/RequireAdmin.jsx"
 import AdminLayout from "../pages/Admin/AdminLayout.jsx"
@@ -21,24 +24,29 @@ import SystemPage from "../pages/Admin/SystemPage.jsx"
 export default function AppRoutes() {
     return (
         <Routes>
-            <Route path="/" element={<HomePage />} />
+            {/* Trang công khai / dùng để thiết lập mật khẩu — không chặn bởi RequirePassword */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/create-post" element={<CreateItemPage />} />
-            <Route path="/posts/:id" element={<ItemDetailPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
-            <Route path="/search-image" element={<SearchImagePage />} />
+
+            {/* Trang app — bắt buộc đã có mật khẩu cục bộ mới được vào */}
+            <Route path="/" element={<RequirePassword><HomePage /></RequirePassword>} />
+            <Route path="/create-post" element={<RequirePassword><CreateItemPage /></RequirePassword>} />
+            <Route path="/posts/:id" element={<RequirePassword><ItemDetailPage /></RequirePassword>} />
+            <Route path="/profile" element={<RequirePassword><ProfilePage /></RequirePassword>} />
+            <Route path="/search-image" element={<RequirePassword><SearchImagePage /></RequirePassword>} />
 
             {/* Admin Dashboard */}
             <Route
                 path="/admin"
                 element={
-                    <RequireAdmin>
-                        <AdminLayout />
-                    </RequireAdmin>
+                    <RequirePassword>
+                        <RequireAdmin>
+                            <AdminLayout />
+                        </RequireAdmin>
+                    </RequirePassword>
                 }
             >
                 <Route index element={<DashboardPage />} />

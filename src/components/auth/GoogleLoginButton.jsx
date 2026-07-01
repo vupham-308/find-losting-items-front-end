@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth.js"
+import { useAuthStore } from "../../stores/authStore.js"
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const GSI_SRC = "https://accounts.google.com/gsi/client"
@@ -51,6 +52,14 @@ export default function GoogleLoginButton({ onError }) {
                     callback: async (response) => {
                         try {
                             const user = await googleLogin({ idToken: response.credential })
+
+                            // Bắt buộc có mật khẩu cục bộ: nếu chưa có → đưa về trang login
+                            // để thiết lập mật khẩu trước khi vào app (dùng cho cả Login & Register).
+                            if (useAuthStore.getState().hasPassword === false) {
+                                navigate("/login", { replace: true })
+                                return
+                            }
+
                             // Phân quyền: Admin → /admin, User → /
                             if (user?.userType === "ADMIN") {
                                 navigate("/admin")
