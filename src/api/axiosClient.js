@@ -7,7 +7,7 @@ import { AUTH_ENDPOINTS } from "./endpoints.js"
 const axiosClient = axios.create({
     // Dev: để rỗng → request /api đi qua Vite proxy (same-origin) nên cookie SameSite=Lax
     // mới được browser chấp nhận. Production: đặt VITE_API_URL để trỏ thẳng backend.
-    baseURL: import.meta.env.VITE_API_URL || "",
+    baseURL: "https://sba301-lost-and-found-backend.onrender.com",
     headers: { "Content-Type": "application/json" },
     withCredentials: true, // Gửi/nhận cookie (refresh token) với mọi request
 })
