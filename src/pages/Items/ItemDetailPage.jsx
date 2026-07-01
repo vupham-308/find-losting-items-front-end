@@ -171,9 +171,9 @@ export default function ItemDetailPage() {
                         {/* Image — compact */}
                         <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm">
                             <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
-                                {post.image_url || post.blurred_image_url ? (
+                                {((claimResult?.details?.image_url) || post.image_url || post.blurred_image_url) ? (
                                     <img
-                                        src={post.image_url || post.blurred_image_url}
+                                        src={(claimResult?.details?.image_url) || post.image_url || post.blurred_image_url}
                                         alt={post.title}
                                         className="w-full h-full object-cover"
                                     />

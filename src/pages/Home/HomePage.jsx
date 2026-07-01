@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { usePost } from "../../hooks/usePost";
 import PostDetailModal from "../../components/post/PostDetailModal.jsx";
+import SearchImageModal from "../../components/post/SearchImageModal.jsx";
 
 const HCMC_DISTRICTS = [
   "Tất cả khu vực",
@@ -74,6 +75,7 @@ function ItemCard({ item, onClick }) {
 export default function HomePage() {
     const navigate = useNavigate();
     const [selectedPostId, setSelectedPostId] = useState(null);
+    const [isSearchImageOpen, setIsSearchImageOpen] = useState(false);
     const {
         postsList,
         currentPage,
@@ -134,15 +136,14 @@ export default function HomePage() {
                             <span className="material-symbols-outlined">report_gmailerrorred</span>
                             Đăng bài ngay
                         </button>
-                        <Link to="/search-image" className="inline-block">
-                            <button
-                                type="button"
-                                className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
-                            >
-                                <span className="material-symbols-outlined">search_check</span>
-                                Tìm kiếm với hình ảnh
-                            </button>
-                        </Link>
+                        <button
+                            type="button"
+                            onClick={() => setIsSearchImageOpen(true)}
+                            className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined">search_check</span>
+                            Tìm kiếm với hình ảnh
+                        </button>
                     </div>
                 </div>
                 <div className="absolute right-0 bottom-0 top-0 w-1/2 hidden md:block opacity-30">
@@ -216,13 +217,13 @@ export default function HomePage() {
                                         </button>
                                     )}
                                 </div>
-                                <Link
-                                    to="/search-image"
+                                <button
+                                    onClick={() => setIsSearchImageOpen(true)}
                                     title="Tìm kiếm bằng hình ảnh (AI)"
                                     className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0 border border-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-                                </Link>
+                                </button>
                             </div>
                         </div>
                         {/* Type Filter Tabs */}
@@ -328,6 +329,11 @@ export default function HomePage() {
                     postId={selectedPostId}
                     onClose={() => setSelectedPostId(null)}
                     onActionComplete={isSearchResult ? executeSearch : fetchPosts}
+                />
+            )}
+            {isSearchImageOpen && (
+                <SearchImageModal
+                    onClose={() => setIsSearchImageOpen(false)}
                 />
             )}
         </main>

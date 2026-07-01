@@ -8,7 +8,6 @@ import ItemDetailPage from "../pages/Items/ItemDetailPage.jsx"
 import ProfilePage from "../pages/Auth/Profile.jsx"
 import TermsOfServicePage from "../pages/Home/TermsOfService.jsx"
 import PrivacyPolicyPage from "../pages/Home/PrivacyPolicy.jsx"
-import SearchImagePage from "../pages/Home/SearchImage.jsx"
 
 // Guards
 import RequirePassword from "../components/auth/RequirePassword.jsx"
@@ -36,7 +35,6 @@ export default function AppRoutes() {
             <Route path="/create-post" element={<RequirePassword><CreateItemPage /></RequirePassword>} />
             <Route path="/posts/:id" element={<RequirePassword><ItemDetailPage /></RequirePassword>} />
             <Route path="/profile" element={<RequirePassword><ProfilePage /></RequirePassword>} />
-            <Route path="/search-image" element={<RequirePassword><SearchImagePage /></RequirePassword>} />
 
             {/* Admin Dashboard */}
             <Route
