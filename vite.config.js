@@ -6,13 +6,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Mọi request /authService sẽ được chuyển tiếp tới backend, tránh lỗi CORS khi dev
+      // Proxy /api → backend thật, giúp cookie SameSite=Lax hoạt động (same-origin)
       '/api': {
-        // Dùng 127.0.0.1 (IPv4) thay vì localhost để tránh Node phân giải sang ::1 (IPv6)
-        // gây ECONNREFUSED khi backend chỉ lắng nghe trên IPv4.
-        target: 'http://127.0.0.1:8081',
+        target: 'https://sba301-lost-and-found-backend.onrender.com',
         changeOrigin: true,
+        secure: true,
+        // Viết lại Domain của Set-Cookie về host hiện tại (localhost) để browser chấp nhận cookie.
+        cookieDomainRewrite: '',
       },
+    },
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
     },
   },
 })

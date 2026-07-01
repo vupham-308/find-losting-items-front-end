@@ -5,14 +5,23 @@ import { AUTH_ENDPOINTS } from "./endpoints.js"
 // Instance axios dùng chung cho toàn app.
 // baseURL để rỗng khi dev (request /api đi qua Vite proxy); đặt VITE_API_URL khi build production.
 const axiosClient = axios.create({
-    baseURL: "https://sba301-lost-and-found-backend.onrender.com",
+    // Dev: để rỗng → request /api đi qua Vite proxy (same-origin) nên cookie SameSite=Lax
+    // mới được browser chấp nhận. Production: đặt VITE_API_URL để trỏ thẳng backend.
+    baseURL: import.meta.env.VITE_API_URL || "",
     headers: { "Content-Type": "application/json" },
+    withCredentials: true, // Gửi/nhận cookie (refresh token) với mọi request
 })
 
 // Request interceptor: tự gắn Bearer token (lấy từ store, dùng getState() ngoài React).
 axiosClient.interceptors.request.use((config) => {
-    const token = useAuthStore.getState().token
-    if (token) config.headers.Authorization = `Bearer ${token}`
+    // Không gắn Bearer token cho refresh endpoint — endpoint này chỉ cần cookie,
+    // nếu gắn token hết hạn, Spring Security sẽ redirect (302) → browser chuyển POST thành GET → 405.
+    if (config.url !== AUTH_ENDPOINTS.refreshToken) {
+        const token = useAuthStore.getState().token
+        if (token) config.headers.Authorization = `Bearer ${token}`
+    }
+    // Debug: log mọi request để tìm lỗi 405 GET
+    console.log(`[Axios Request] ${config.method?.toUpperCase()} ${config.url}`)
     return config
 })
 
@@ -61,11 +70,14 @@ axiosClient.interceptors.response.use(
             isRefreshing = true
 
             try {
-                // Gọi API refresh — refresh token nằm trong HTTP-only cookie
-                const res = await axiosClient.post(AUTH_ENDPOINTS.refreshToken, null, {
-                    withCredentials: true,
-                })
-                const newToken = res?.data?.accessToken
+                // Gọi API refresh — refresh token nằm trong HTTP-only cookie.
+                // Dùng axiosClient (không phải axios gốc) để giữ đúng baseURL, headers, withCredentials.
+                // Vòng lặp vô hạn không xảy ra vì condition ở trên đã loại trừ url === refreshToken.
+                const res = await axiosClient.post(AUTH_ENDPOINTS.refreshToken)
+                // axiosClient interceptor đã unwrap response.data →
+                // res = envelope { status, message, data: { accessToken, ... } }
+                const newToken = res?.data?.accessToken ?? res?.accessToken
+                console.log("[Refresh Token] Response:", { hasToken: !!newToken, res })
                 if (newToken) {
                     // Cập nhật token mới vào store
                     useAuthStore.getState().setToken(newToken)

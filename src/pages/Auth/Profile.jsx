@@ -12,15 +12,20 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
 
-    // Setup password form state
-    const [showPasswordForm, setShowPasswordForm] = useState(false)
+    // Dashboard active tab
+    const [activeTab, setActiveTab] = useState("info")
+
+    // Change password flow state (via OTP, giống flow quên mật khẩu)
+    const CHANGE_STEPS = { IDLE: "idle", OTP: "otp", SUCCESS: "success" }
+    const [changeStep, setChangeStep] = useState(CHANGE_STEPS.IDLE)
+    const [otp, setOtp] = useState(["", "", "", "", "", ""])
+    const [countdown, setCountdown] = useState(0)
     const [newPassword, setNewPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [passwordLoading, setPasswordLoading] = useState(false)
     const [passwordError, setPasswordError] = useState("")
-    const [passwordSuccess, setPasswordSuccess] = useState("")
 
     useEffect(() => {
         if (!user) {
@@ -122,24 +127,92 @@ export default function ProfilePage() {
     }
 
     // Password validation
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/
     const passwordChecks = [
         { label: "Ít nhất 8 ký tự", valid: newPassword.length >= 8 },
         { label: "Chữ thường (a-z)", valid: /[a-z]/.test(newPassword) },
         { label: "Chữ hoa (A-Z)", valid: /[A-Z]/.test(newPassword) },
         { label: "Chữ số (0-9)", valid: /\d/.test(newPassword) },
-        { label: "Ký tự đặc biệt (@$!%*?&)", valid: /[@$!%*?&]/.test(newPassword) },
+        { label: "Ký tự đặc biệt", valid: /[^a-zA-Z0-9]/.test(newPassword) },
     ]
-    const isPasswordValid = newPassword.length >= 8 && passwordRegex.test(newPassword)
+    const isPasswordValid = passwordChecks.every((c) => c.valid)
     const isConfirmMatch = confirmPassword === newPassword && confirmPassword.length > 0
 
-    const handleSetupPassword = async (e) => {
+    // --- OTP input logic ---
+    const handleOtpChange = (index, value) => {
+        if (!/^[0-9]?$/.test(value)) return
+        const next = [...otp]
+        next[index] = value
+        setOtp(next)
+        if (value && index < 5) document.getElementById(`profile-otp-${index + 1}`)?.focus()
+    }
+
+    const handleOtpKeyDown = (index, e) => {
+        if (e.key === "Backspace" && !otp[index] && index > 0) {
+            document.getElementById(`profile-otp-${index - 1}`)?.focus()
+        }
+    }
+
+    const handleOtpPaste = (e) => {
+        const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+        if (text.length === 6) {
+            setOtp(text.split(""))
+            document.getElementById("profile-otp-5")?.focus()
+        }
+        e.preventDefault()
+    }
+
+    // --- Countdown gửi lại OTP ---
+    const startCountdown = () => {
+        setCountdown(60)
+        const timer = setInterval(() => {
+            setCountdown((c) => {
+                if (c <= 1) { clearInterval(timer); return 0 }
+                return c - 1
+            })
+        }, 1000)
+    }
+
+    // --- Bước 1: gửi OTP tới email của người dùng đang đăng nhập ---
+    const handleRequestOtp = async () => {
+        if (!profile?.mail) return
+        setPasswordError("")
+        setPasswordLoading(true)
+        try {
+            await authService.forgotPassword({ mail: profile.mail })
+            setChangeStep(CHANGE_STEPS.OTP)
+            startCountdown()
+        } catch (err) {
+            setPasswordError(err.message || "Gửi mã OTP thất bại, vui lòng thử lại")
+        } finally {
+            setPasswordLoading(false)
+        }
+    }
+
+    // --- Gửi lại OTP ---
+    const handleResendOtp = async () => {
+        if (!profile?.mail) return
+        setPasswordError("")
+        try {
+            await authService.forgotPassword({ mail: profile.mail })
+            setOtp(["", "", "", "", "", ""])
+            startCountdown()
+        } catch (err) {
+            setPasswordError(err.message || "Gửi lại OTP thất bại")
+        }
+    }
+
+    // --- Bước 2: xác nhận OTP + mật khẩu mới ---
+    const handleChangePassword = async (e) => {
         e.preventDefault()
         setPasswordError("")
-        setPasswordSuccess("")
 
+        const code = otp.join("")
+        if (code.length < 6) {
+            setPasswordError("Vui lòng nhập đủ 6 số OTP")
+            return
+        }
         if (!isPasswordValid) {
-            setPasswordError("Mật khẩu không đáp ứng yêu cầu")
+            setPasswordError("Mật khẩu chưa đủ điều kiện")
             return
         }
         if (!isConfirmMatch) {
@@ -149,17 +222,26 @@ export default function ProfilePage() {
 
         setPasswordLoading(true)
         try {
-            await authService.setupPassword({ newPassword, confirmPassword })
-            setPasswordSuccess("Thiết lập mật khẩu thành công! Bạn có thể đăng nhập bằng email và mật khẩu.")
+            await authService.resetPassword({ mail: profile.mail, otp: code, newPassword })
+            setChangeStep(CHANGE_STEPS.SUCCESS)
             setProfile((prev) => ({ ...prev, hasPassword: true }))
+            setOtp(["", "", "", "", "", ""])
             setNewPassword("")
             setConfirmPassword("")
-            setShowPasswordForm(false)
         } catch (err) {
-            setPasswordError(err.message || "Thiết lập mật khẩu thất bại")
+            setPasswordError(err.message || "Đổi mật khẩu thất bại, vui lòng thử lại")
         } finally {
             setPasswordLoading(false)
         }
+    }
+
+    // Đặt lại về trạng thái ban đầu của tab bảo mật
+    const resetChangeFlow = () => {
+        setChangeStep(CHANGE_STEPS.IDLE)
+        setOtp(["", "", "", "", "", ""])
+        setNewPassword("")
+        setConfirmPassword("")
+        setPasswordError("")
     }
 
     if (loading) {
@@ -222,24 +304,15 @@ export default function ProfilePage() {
         },
     ]
 
-    const accountStatus = [
-        {
-            icon: profile.googleAccount ? "check_circle" : "cancel",
-            label: "Tài khoản Google",
-            hint: profile.googleAccount ? "Đã liên kết" : "Chưa liên kết",
-            active: profile.googleAccount,
-        },
-        {
-            icon: profile.hasPassword ? "check_circle" : "cancel",
-            label: "Mật khẩu",
-            hint: profile.hasPassword ? "Đã thiết lập" : "Chưa thiết lập",
-            active: profile.hasPassword,
-        },
+    const navTabs = [
+        { id: "info", icon: "person", label: "Thông tin cá nhân" },
+        { id: "security", icon: "security", label: "Bảo mật" },
+        { id: "posts", icon: "list_alt", label: "Tin đã đăng" },
     ]
 
     return (
         <div className="bg-surface min-h-[calc(100vh-4rem)]">
-            <div className="max-w-5xl mx-auto px-gutter-mobile sm:px-gutter-desktop py-6 sm:py-10">
+            <div className="max-w-6xl mx-auto px-gutter-mobile sm:px-gutter-desktop py-6 sm:py-10">
                 {/* Breadcrumb / page title */}
                 <div className="flex items-center gap-2 mb-5 text-on-surface-variant">
                     <button
@@ -321,164 +394,182 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Two-column dashboard */}
-                <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr] items-start">
-                    {/* Left column — account status */}
-                    <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6 lg:sticky lg:top-24">
-                        <div className="flex items-center gap-2 mb-5">
-                            <span className="material-symbols-outlined text-primary text-[22px]">
-                                security
-                            </span>
-                            <h3 className="text-[16px] font-bold text-on-surface">
-                                Trạng thái tài khoản
-                            </h3>
-                        </div>
-                        <div className="space-y-3">
-                            {accountStatus.map((item) => (
-                                <div
-                                    key={item.label}
-                                    className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border ${item.active
-                                            ? "border-primary/20 bg-primary-fixed/30"
-                                            : "border-outline-variant bg-surface-container-low"
-                                        }`}
-                                >
-                                    <span
-                                        className={`material-symbols-outlined text-[24px] ${item.active ? "text-primary" : "text-outline"
-                                            }`}
-                                    >
-                                        {item.icon}
-                                    </span>
-                                    <div className="min-w-0">
-                                        <p
-                                            className={`text-[14px] font-semibold ${item.active
-                                                    ? "text-on-primary-fixed"
-                                                    : "text-on-surface"
+                {/* Dashboard: sidebar nav + tab content */}
+                <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr] items-start">
+                    {/* Sidebar navigation */}
+                    <nav className="bg-surface-container-lowest rounded-2xl shadow-md p-3 lg:sticky lg:top-24">
+                        <ul className="flex lg:flex-col gap-1 overflow-x-auto">
+                            {navTabs.map((tab) => {
+                                const active = activeTab === tab.id
+                                return (
+                                    <li key={tab.id} className="shrink-0 lg:shrink">
+                                        <button
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[14px] font-semibold transition-colors ${active
+                                                    ? "bg-primary text-on-primary shadow-md shadow-primary/20"
+                                                    : "text-on-surface-variant hover:bg-surface-container-low"
                                                 }`}
                                         >
-                                            {item.label}
-                                        </p>
-                                        <p className="text-[12px] text-on-surface-variant">
-                                            {item.hint}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Right column — details + security */}
-                    <div className="space-y-6">
-                        {/* Personal info */}
-                        <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6">
-                            <div className="flex items-center gap-2 mb-5">
-                                <span className="material-symbols-outlined text-primary text-[22px]">
-                                    person
-                                </span>
-                                <h3 className="text-[16px] font-bold text-on-surface">
-                                    Thông tin cá nhân
-                                </h3>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                                {infoItems.map((item) => (
-                                    <div
-                                        key={item.label}
-                                        className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors"
-                                    >
-                                        <div className="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center shrink-0">
-                                            <span className="material-symbols-outlined text-on-primary-fixed text-[20px]">
-                                                {item.icon}
+                                            <span className="material-symbols-outlined text-[22px]">
+                                                {tab.icon}
                                             </span>
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider">
-                                                {item.label}
-                                            </p>
-                                            {item.isLink ? (
-                                                <a
-                                                    href={item.value}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-primary text-[15px] font-medium hover:underline truncate block mt-0.5"
-                                                >
-                                                    {item.value}
-                                                </a>
-                                            ) : (
-                                                <p
-                                                    className={`text-[15px] font-medium truncate mt-0.5 ${item.muted
-                                                            ? "text-outline italic"
-                                                            : "text-on-surface"
-                                                        }`}
-                                                >
-                                                    {item.value}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Setup password section — only for Google accounts without a password */}
-                        {profile.googleAccount && !profile.hasPassword && (
-                            <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-secondary text-[22px]">
-                                            key
-                                        </span>
-                                        <h3 className="text-[16px] font-bold text-on-surface">
-                                            Thiết lập mật khẩu
-                                        </h3>
-                                    </div>
-                                    {!showPasswordForm && (
-                                        <button
-                                            onClick={() => {
-                                                setShowPasswordForm(true)
-                                                setPasswordError("")
-                                                setPasswordSuccess("")
-                                            }}
-                                            className="flex items-center gap-1.5 px-4 py-2 bg-secondary text-on-secondary rounded-full text-[13px] font-semibold hover:opacity-90 transition-all shadow-md shadow-secondary/20"
-                                        >
-                                            <span className="material-symbols-outlined text-[18px]">add</span>
-                                            Tạo mật khẩu
+                                            <span className="whitespace-nowrap">{tab.label}</span>
                                         </button>
-                                    )}
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </nav>
+
+                    {/* Tab content */}
+                    <div className="min-w-0 space-y-6">
+                        {/* Tab: Thông tin cá nhân */}
+                        {activeTab === "info" && (
+                            <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6">
+                                <div className="flex items-center gap-2 mb-5">
+                                    <span className="material-symbols-outlined text-primary text-[22px]">
+                                        person
+                                    </span>
+                                    <h3 className="text-[16px] font-bold text-on-surface">
+                                        Thông tin cá nhân
+                                    </h3>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {infoItems.map((item) => (
+                                        <div
+                                            key={item.label}
+                                            className="flex items-start gap-3.5 px-4 py-3.5 rounded-xl bg-surface-container-low/60 hover:bg-surface-container-low transition-colors"
+                                        >
+                                            <div className="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center shrink-0">
+                                                <span className="material-symbols-outlined text-on-primary-fixed text-[20px]">
+                                                    {item.icon}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[11px] text-on-surface-variant font-semibold uppercase tracking-wider">
+                                                    {item.label}
+                                                </p>
+                                                {item.isLink ? (
+                                                    <a
+                                                        href={item.value}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-primary text-[15px] font-medium hover:underline truncate block mt-0.5"
+                                                    >
+                                                        {item.value}
+                                                    </a>
+                                                ) : (
+                                                    <p
+                                                        className={`text-[15px] font-medium truncate mt-0.5 ${item.muted
+                                                                ? "text-outline italic"
+                                                                : "text-on-surface"
+                                                            }`}
+                                                    >
+                                                        {item.value}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab: Bảo mật */}
+                        {activeTab === "security" && (
+                            <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6">
+                                <div className="flex items-center gap-2 mb-5">
+                                    <span className="material-symbols-outlined text-primary text-[22px]">
+                                        password
+                                    </span>
+                                    <h3 className="text-[16px] font-bold text-on-surface">
+                                        Đổi mật khẩu
+                                    </h3>
                                 </div>
 
-                                {/* Info banner */}
-                                {!showPasswordForm && !passwordSuccess && (
-                                    <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-secondary-fixed/30 border border-secondary/15">
-                                        <span className="material-symbols-outlined text-on-secondary-fixed text-[20px] mt-0.5 shrink-0">
-                                            info
-                                        </span>
-                                        <p className="text-[14px] text-on-secondary-fixed leading-relaxed">
-                                            Tài khoản của bạn đang sử dụng đăng nhập Google. Bạn có thể thiết lập mật khẩu để đăng nhập bằng email và mật khẩu.
-                                        </p>
+                                {/* Error (chung cho mọi bước, trừ success) */}
+                                {passwordError && changeStep !== CHANGE_STEPS.SUCCESS && (
+                                    <div className="flex items-center gap-2 px-4 py-3 mb-4 bg-error-container text-on-error-container rounded-xl text-[14px]">
+                                        <span className="material-symbols-outlined text-[18px]">error</span>
+                                        {passwordError}
                                     </div>
                                 )}
 
-                                {/* Success message */}
-                                {passwordSuccess && (
-                                    <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-primary-fixed/30 border border-primary/15">
-                                        <span className="material-symbols-outlined text-primary text-[20px]">
-                                            check_circle
-                                        </span>
-                                        <p className="text-[14px] text-on-primary-fixed font-medium">
-                                            {passwordSuccess}
-                                        </p>
-                                    </div>
+                                {/* ── BƯỚC 1: Giới thiệu + nút gửi OTP ── */}
+                                {changeStep === CHANGE_STEPS.IDLE && (
+                                    <>
+                                        <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-secondary-fixed/30 border border-secondary/15 mb-4">
+                                            <span className="material-symbols-outlined text-on-secondary-fixed text-[20px] mt-0.5 shrink-0">
+                                                info
+                                            </span>
+                                            <p className="text-[14px] text-on-secondary-fixed leading-relaxed">
+                                                Chúng tôi sẽ gửi mã OTP tới email{" "}
+                                                <span className="font-semibold">{profile.mail}</span>{" "}
+                                                để xác thực. Sau khi nhập mã, bạn có thể đặt mật khẩu mới.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={handleRequestOtp}
+                                            disabled={passwordLoading}
+                                            className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl text-[14px] font-semibold hover:bg-primary-container active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                                        >
+                                            {passwordLoading ? (
+                                                <>
+                                                    <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                                                    Đang gửi...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-[18px]">lock_reset</span>
+                                                    Đổi mật khẩu
+                                                </>
+                                            )}
+                                        </button>
+                                    </>
                                 )}
 
-                                {/* Password setup form */}
-                                {showPasswordForm && (
-                                    <form onSubmit={handleSetupPassword} className="space-y-4 mt-2">
-                                        {/* Error */}
-                                        {passwordError && (
-                                            <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-xl text-[14px]">
-                                                <span className="material-symbols-outlined text-[18px]">error</span>
-                                                {passwordError}
+                                {/* ── BƯỚC 2: Nhập OTP + mật khẩu mới ── */}
+                                {changeStep === CHANGE_STEPS.OTP && (
+                                    <form onSubmit={handleChangePassword} className="space-y-4">
+                                        <p className="text-[14px] text-on-surface-variant">
+                                            Nhập mã OTP đã gửi tới{" "}
+                                            <span className="font-semibold text-on-surface">{profile.mail}</span>{" "}
+                                            và mật khẩu mới.
+                                        </p>
+
+                                        {/* OTP */}
+                                        <div className="space-y-1.5">
+                                            <label className="text-on-surface text-[13px] font-semibold">Mã OTP</label>
+                                            <div className="flex justify-between gap-2 max-w-sm" onPaste={handleOtpPaste}>
+                                                {otp.map((digit, i) => (
+                                                    <input
+                                                        key={i}
+                                                        id={`profile-otp-${i}`}
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        maxLength={1}
+                                                        value={digit}
+                                                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                                                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                                        className={`w-full aspect-square text-center text-[22px] font-bold border-2 rounded-xl outline-none transition-all ${digit
+                                                                ? "border-primary bg-primary-container text-on-primary-container"
+                                                                : "border-outline-variant bg-surface-container-low text-on-surface focus:border-primary focus:ring-4 focus:ring-primary/15"
+                                                            }`}
+                                                    />
+                                                ))}
                                             </div>
-                                        )}
+                                            <div className="max-w-sm text-right">
+                                                {countdown > 0 ? (
+                                                    <span className="text-on-surface-variant text-[13px]">
+                                                        Gửi lại sau <span className="font-semibold text-primary">{countdown}s</span>
+                                                    </span>
+                                                ) : (
+                                                    <button type="button" onClick={handleResendOtp} className="text-primary text-[13px] font-semibold hover:underline">
+                                                        Gửi lại mã OTP
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
 
                                         {/* New password */}
                                         <div className="space-y-1.5">
@@ -568,7 +659,7 @@ export default function ProfilePage() {
                                         <div className="flex items-center gap-3 pt-2">
                                             <button
                                                 type="submit"
-                                                disabled={passwordLoading || !isPasswordValid || !isConfirmMatch}
+                                                disabled={passwordLoading || !isPasswordValid || !isConfirmMatch || otp.join("").length < 6}
                                                 className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl text-[14px] font-semibold hover:bg-primary-container active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                                             >
                                                 {passwordLoading ? (
@@ -585,12 +676,7 @@ export default function ProfilePage() {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setShowPasswordForm(false)
-                                                    setNewPassword("")
-                                                    setConfirmPassword("")
-                                                    setPasswordError("")
-                                                }}
+                                                onClick={resetChangeFlow}
                                                 className="px-5 py-3 text-on-surface-variant hover:bg-surface-container-low rounded-xl text-[14px] font-medium transition-colors"
                                             >
                                                 Hủy
@@ -598,13 +684,32 @@ export default function ProfilePage() {
                                         </div>
                                     </form>
                                 )}
+
+                                {/* ── BƯỚC 3: Thành công ── */}
+                                {changeStep === CHANGE_STEPS.SUCCESS && (
+                                    <div className="flex flex-col items-center text-center py-6">
+                                        <div className="w-16 h-16 bg-primary-container rounded-full flex items-center justify-center mb-4">
+                                            <span className="material-symbols-outlined text-on-primary-container text-[36px]">check_circle</span>
+                                        </div>
+                                        <h4 className="text-on-surface text-[20px] font-bold tracking-tight mb-1">Đổi mật khẩu thành công!</h4>
+                                        <p className="text-on-surface-variant text-[14px] mb-5 max-w-sm">
+                                            Mật khẩu của bạn đã được cập nhật. Hãy dùng mật khẩu mới cho những lần đăng nhập sau.
+                                        </p>
+                                        <button
+                                            onClick={resetChangeFlow}
+                                            className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary rounded-xl text-[14px] font-semibold hover:bg-primary-container transition-all shadow-lg shadow-primary/20"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">done</span>
+                                            Hoàn tất
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </div>
-                </div>
 
-                {/* User Posts Section */}
-                <div className="mt-8 bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6 text-left">
+                        {/* Tab: Tin đã đăng */}
+                        {activeTab === "posts" && (
+                        <div className="bg-surface-container-lowest rounded-2xl shadow-md p-5 sm:p-6 text-left">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-4 border-b border-outline-variant/30">
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary text-[24px]">
@@ -843,6 +948,9 @@ export default function ProfilePage() {
                             )}
                         </div>
                     )}
+                        </div>
+                        )}
+                    </div>
                 </div>
             </div>
 

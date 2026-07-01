@@ -1,16 +1,86 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../../hooks/useAuth.js"
+import { useAuthStore } from "../../stores/authStore.js"
+import * as authService from "../../services/authService.js"
 import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
 export default function LoginPage() {
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const { login, logout } = useAuth()
     const [mail, setMail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+
+    // Trạng thái auth toàn cục: dùng để bắt buộc thiết lập mật khẩu cục bộ.
+    const token = useAuthStore((s) => s.token)
+    const storeUser = useAuthStore((s) => s.user)
+    const hasPassword = useAuthStore((s) => s.hasPassword)
+    const setHasPassword = useAuthStore((s) => s.setHasPassword)
+    // Đã đăng nhập (thường là qua Google) nhưng chưa có mật khẩu cục bộ ⇒ bắt buộc thiết lập.
+    const needSetup = !!token && hasPassword === false
+
+    // Thiết lập mật khẩu cục bộ cho tài khoản Google vừa đăng nhập mà chưa có mật khẩu.
+    const [newPassword, setNewPassword] = useState("")
+    const [confirmPassword, setConfirmPassword] = useState("")
+    const [showNewPassword, setShowNewPassword] = useState(false)
+    const [showConfirm, setShowConfirm] = useState(false)
+    const [pwLoading, setPwLoading] = useState(false)
+    const [pwError, setPwError] = useState("")
+
+    const passwordChecks = [
+        { label: "Ít nhất 8 ký tự", valid: newPassword.length >= 8 },
+        { label: "Chữ thường (a-z)", valid: /[a-z]/.test(newPassword) },
+        { label: "Chữ hoa (A-Z)", valid: /[A-Z]/.test(newPassword) },
+        { label: "Chữ số (0-9)", valid: /\d/.test(newPassword) },
+        { label: "Ký tự đặc biệt", valid: /[^a-zA-Z0-9]/.test(newPassword) },
+    ]
+    const isPasswordValid = passwordChecks.every((c) => c.valid)
+    const isConfirmMatch = confirmPassword === newPassword && confirmPassword.length > 0
+
+    // Điều hướng sau khi hoàn tất thiết lập mật khẩu.
+    const goAfterLogin = () => {
+        if (storeUser?.userType === "ADMIN") {
+            navigate("/admin")
+        } else {
+            navigate("/")
+        }
+    }
+
+    // Đăng xuất khỏi phiên đang buộc thiết lập mật khẩu (khi người dùng không muốn tiếp tục).
+    const handleLogout = async () => {
+        setNewPassword("")
+        setConfirmPassword("")
+        setPwError("")
+        await logout()
+    }
+
+    const handleSetupPassword = async (e) => {
+        e.preventDefault()
+        setPwError("")
+
+        if (!isPasswordValid) {
+            setPwError("Mật khẩu chưa đủ điều kiện")
+            return
+        }
+        if (!isConfirmMatch) {
+            setPwError("Mật khẩu xác nhận không khớp")
+            return
+        }
+
+        setPwLoading(true)
+        try {
+            await authService.setupPassword({ newPassword, confirmPassword })
+            setHasPassword(true)
+            goAfterLogin()
+        } catch (err) {
+            setPwError(err.message || "Thiết lập mật khẩu thất bại, vui lòng thử lại")
+        } finally {
+            setPwLoading(false)
+        }
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -99,14 +169,16 @@ export default function LoginPage() {
             {/* ===== Cột phải: form đăng nhập ===== */}
             <main className="flex-1 flex items-center justify-center p-gutter-mobile sm:p-8 relative">
 
-                {/* Nút quay về trang chủ */}
-                <Link
-                    to="/"
-                    className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
-                >
-                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-                    Trang chủ
-                </Link>
+                {/* Nút quay về trang chủ — ẩn khi bắt buộc thiết lập mật khẩu */}
+                {!needSetup && (
+                    <Link
+                        to="/"
+                        className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                        Trang chủ
+                    </Link>
+                )}
 
                 <div className="w-full max-w-md">
 
@@ -118,6 +190,111 @@ export default function LoginPage() {
                         <span className="text-[20px] font-bold text-primary tracking-tight">Sài Gòn Tìm Đồ</span>
                     </div>
 
+                    {/* ===== Form thiết lập mật khẩu cục bộ (bắt buộc, sau khi đăng nhập Google) ===== */}
+                    {needSetup ? (
+                        <>
+                            <div className="mb-stack-lg">
+                                <div className="w-14 h-14 bg-primary-container rounded-2xl flex items-center justify-center mb-stack-md">
+                                    <span className="material-symbols-outlined text-on-primary-container text-[28px]">key</span>
+                                </div>
+                                <h1 className="text-on-surface text-[28px] font-bold tracking-tight">Thiết lập mật khẩu</h1>
+                                <p className="text-on-surface-variant text-[15px] mt-1">
+                                    Tài khoản{" "}
+                                    <span className="font-semibold text-on-surface">{storeUser?.mail || storeUser?.email || ""}</span>{" "}
+                                    chưa có mật khẩu cục bộ. Bạn cần tạo mật khẩu để tiếp tục sử dụng.
+                                </p>
+                            </div>
+
+                            <form onSubmit={handleSetupPassword} className="space-y-stack-md">
+                                {/* Error */}
+                                {pwError && (
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-xl text-[14px]">
+                                        <span className="material-symbols-outlined text-[18px]">error</span>
+                                        {pwError}
+                                    </div>
+                                )}
+
+                                {/* Mật khẩu mới */}
+                                <div className="space-y-stack-sm">
+                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupNewPassword">Mật khẩu mới</label>
+                                    <div className="relative flex items-center">
+                                        <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
+                                        <input
+                                            id="setupNewPassword"
+                                            type={showNewPassword ? "text" : "password"}
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            placeholder="Nhập mật khẩu mới"
+                                            className="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
+                                        />
+                                        <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors">
+                                            <span className="material-symbols-outlined text-[20px]">{showNewPassword ? "visibility_off" : "visibility"}</span>
+                                        </button>
+                                    </div>
+                                    <ul className="space-y-1 pt-1">
+                                        {passwordChecks.map((rule) => (
+                                            <li key={rule.label} className={`text-[12px] flex items-center gap-1 transition-colors ${rule.valid ? "text-primary" : "text-on-surface-variant"}`}>
+                                                <span className="material-symbols-outlined text-[14px]">
+                                                    {rule.valid ? "check_circle" : "radio_button_unchecked"}
+                                                </span>
+                                                {rule.label}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {/* Xác nhận mật khẩu */}
+                                <div className="space-y-stack-sm">
+                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupConfirmPassword">Xác nhận mật khẩu</label>
+                                    <div className="relative flex items-center">
+                                        <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock_reset</span>
+                                        <input
+                                            id="setupConfirmPassword"
+                                            type={showConfirm ? "text" : "password"}
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            placeholder="Nhập lại mật khẩu mới"
+                                            className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${confirmPassword.length > 0
+                                                    ? isConfirmMatch
+                                                        ? "border-primary focus:border-primary"
+                                                        : "border-error focus:border-error"
+                                                    : "border-outline-variant focus:border-primary"
+                                                }`}
+                                        />
+                                        <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors">
+                                            <span className="material-symbols-outlined text-[20px]">{showConfirm ? "visibility_off" : "visibility"}</span>
+                                        </button>
+                                    </div>
+                                    {confirmPassword.length > 0 && !isConfirmMatch && (
+                                        <p className="text-error text-[12px] mt-1 px-1">Mật khẩu xác nhận không khớp</p>
+                                    )}
+                                </div>
+
+                                {/* Submit */}
+                                <button
+                                    type="submit"
+                                    disabled={pwLoading || !isPasswordValid || !isConfirmMatch}
+                                    className="w-full bg-primary text-on-primary py-3.5 rounded-xl text-[16px] font-semibold hover:bg-primary-container active:scale-[0.99] transition-all flex justify-center items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
+                                >
+                                    {pwLoading ? (
+                                        <><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Đang lưu...</>
+                                    ) : (
+                                        <><span className="material-symbols-outlined text-[20px]">save</span> Lưu mật khẩu</>
+                                    )}
+                                </button>
+
+                                {/* Thiết lập mật khẩu là bắt buộc — thay vì bỏ qua, người dùng có thể đăng xuất. */}
+                                <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    className="w-full text-on-surface-variant text-[14px] hover:text-primary transition-colors"
+                                >
+                                    Đăng xuất
+                                </button>
+                            </form>
+                        </>
+                    ) : (
+                    <>
                     {/* Tiêu đề */}
                     <div className="mb-stack-lg">
                         <h1 className="text-on-surface text-[28px] font-bold tracking-tight">Đăng nhập</h1>
@@ -216,6 +393,8 @@ export default function LoginPage() {
                         {/* Google */}
                         <GoogleLoginButton onError={setError} />
                     </form>
+                    </>
+                    )}
                 </div>
             </main>
         </div>
