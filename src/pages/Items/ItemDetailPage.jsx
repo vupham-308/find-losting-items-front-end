@@ -235,9 +235,18 @@ export default function ItemDetailPage() {
                                 </div>
                             )}
 
-                            {/* Contact Info (owner or verified or public) */}
+                            {/* Contact Info */}
                             <div className="pt-2 border-t border-outline-variant/20">
                                 <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-2">Người đăng</p>
+
+                                {post.hide_post_type === "WHEN_MATCH" && !isOwner && !isVerified && (
+                                    <div className="flex items-start gap-2 mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                        <span className="material-symbols-outlined text-[16px] text-amber-600 mt-0.5 flex-shrink-0">info</span>
+                                        <p className="text-[12px] text-amber-800 leading-snug">
+                                            Thông tin người nhặt sẽ được hiển thị sau khi bạn xác minh thành công
+                                        </p>
+                                    </div>
+                                )}
                                 {(isOwner || isVerified || hasContactInfo) ? (
                                     <div className="bg-primary/5 border border-primary/10 rounded-xl p-3 space-y-2 text-[13px]">
                                         <div className="flex items-center gap-2">
