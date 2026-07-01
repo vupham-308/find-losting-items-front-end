@@ -215,8 +215,8 @@ export default function LoginPage() {
                                 )}
 
                                 {/* Mật khẩu mới */}
-                                <div className="space-y-stack-sm">
-                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupNewPassword">Mật khẩu mới</label>
+                                <div>
+                                    <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="setupNewPassword">Mật khẩu mới</label>
                                     <div className="relative flex items-center">
                                         <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
                                         <input
@@ -231,21 +231,11 @@ export default function LoginPage() {
                                             <span className="material-symbols-outlined text-[20px]">{showNewPassword ? "visibility_off" : "visibility"}</span>
                                         </button>
                                     </div>
-                                    <ul className="space-y-1 pt-1">
-                                        {passwordChecks.map((rule) => (
-                                            <li key={rule.label} className={`text-[12px] flex items-center gap-1 transition-colors ${rule.valid ? "text-primary" : "text-on-surface-variant"}`}>
-                                                <span className="material-symbols-outlined text-[14px]">
-                                                    {rule.valid ? "check_circle" : "radio_button_unchecked"}
-                                                </span>
-                                                {rule.label}
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
 
                                 {/* Xác nhận mật khẩu */}
-                                <div className="space-y-stack-sm">
-                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupConfirmPassword">Xác nhận mật khẩu</label>
+                                <div>
+                                    <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="setupConfirmPassword">Xác nhận mật khẩu</label>
                                     <div className="relative flex items-center">
                                         <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock_reset</span>
                                         <input
@@ -256,7 +246,7 @@ export default function LoginPage() {
                                             placeholder="Nhập lại mật khẩu mới"
                                             className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${confirmPassword.length > 0
                                                     ? isConfirmMatch
-                                                        ? "border-primary focus:border-primary"
+                                                        ? "border-green-500 focus:border-green-500"
                                                         : "border-error focus:border-error"
                                                     : "border-outline-variant focus:border-primary"
                                                 }`}
@@ -269,6 +259,18 @@ export default function LoginPage() {
                                         <p className="text-error text-[12px] mt-1 px-1">Mật khẩu xác nhận không khớp</p>
                                     )}
                                 </div>
+
+                                {/* Yêu cầu mật khẩu — đặt dưới ô xác nhận, mỗi mục đạt sẽ chuyển xanh lá */}
+                                <ul className="space-y-1.5">
+                                    {passwordChecks.map((rule) => (
+                                        <li key={rule.label} className={`text-[12px] flex items-center gap-1.5 transition-colors ${rule.valid ? "text-green-600" : "text-on-surface-variant"}`}>
+                                            <span className="material-symbols-outlined text-[14px]">
+                                                {rule.valid ? "check_circle" : "radio_button_unchecked"}
+                                            </span>
+                                            {rule.label}
+                                        </li>
+                                    ))}
+                                </ul>
 
                                 {/* Submit */}
                                 <button
@@ -393,6 +395,14 @@ export default function LoginPage() {
                         {/* Google */}
                         <GoogleLoginButton onError={setError} />
                     </form>
+
+                    {/* Đăng ký */}
+                    <p className="mt-stack-lg text-center text-on-surface-variant text-[14px]">
+                        Chưa có tài khoản?{" "}
+                        <Link to="/register" className="text-primary font-semibold hover:underline">
+                            Đăng ký ngay
+                        </Link>
+                    </p>
                     </>
                     )}
                 </div>

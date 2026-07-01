@@ -217,8 +217,8 @@ export default function RegisterPage() {
                         </div>
 
                         {/* Password */}
-                        <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="password">
+                        <div>
+                            <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="password">
                                 Mật khẩu
                             </label>
                             <div className="relative flex items-center">
@@ -242,28 +242,11 @@ export default function RegisterPage() {
                                     </span>
                                 </button>
                             </div>
-
-                            {/* Password rules checklist */}
-                            <ul className="space-y-1 pt-1">
-                                {pwRules.map((rule) => (
-                                    <li
-                                        key={rule.label}
-                                        className={`text-[12px] flex items-center gap-1 transition-colors ${
-                                            rule.ok ? "text-primary" : "text-on-surface-variant"
-                                        }`}
-                                    >
-                                        <span className="material-symbols-outlined text-[14px]">
-                                            {rule.ok ? "check_circle" : "radio_button_unchecked"}
-                                        </span>
-                                        {rule.label}
-                                    </li>
-                                ))}
-                            </ul>
                         </div>
 
                         {/* Confirm Password */}
-                        <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="confirmPassword">
+                        <div>
+                            <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="confirmPassword">
                                 Xác nhận mật khẩu
                             </label>
                             <div className="relative flex items-center">
@@ -274,10 +257,12 @@ export default function RegisterPage() {
                                     value={form.confirmPassword}
                                     onChange={update("confirmPassword")}
                                     placeholder="Nhập lại mật khẩu"
-                                    className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none ${
-                                        form.confirmPassword && form.password !== form.confirmPassword
-                                            ? "border-error focus:ring-error/15 focus:border-error"
-                                            : "border-outline-variant"
+                                    className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${
+                                        form.confirmPassword
+                                            ? form.password === form.confirmPassword
+                                                ? "border-green-500 focus:border-green-500"
+                                                : "border-error focus:ring-error/15 focus:border-error"
+                                            : "border-outline-variant focus:border-primary"
                                     }`}
                                 />
                                 <button
@@ -293,8 +278,8 @@ export default function RegisterPage() {
                             </div>
                             {/* Match indicator */}
                             {form.confirmPassword && (
-                                <p className={`text-[12px] flex items-center gap-1 ${
-                                    form.password === form.confirmPassword ? "text-primary" : "text-error"
+                                <p className={`text-[12px] flex items-center gap-1 mt-1 px-1 ${
+                                    form.password === form.confirmPassword ? "text-green-600" : "text-error"
                                 }`}>
                                     <span className="material-symbols-outlined text-[14px]">
                                         {form.password === form.confirmPassword ? "check_circle" : "cancel"}
@@ -303,6 +288,23 @@ export default function RegisterPage() {
                                 </p>
                             )}
                         </div>
+
+                        {/* Yêu cầu mật khẩu — đặt dưới ô xác nhận, mỗi mục đạt sẽ chuyển xanh lá */}
+                        <ul className="space-y-1.5">
+                            {pwRules.map((rule) => (
+                                <li
+                                    key={rule.label}
+                                    className={`text-[12px] flex items-center gap-1.5 transition-colors ${
+                                        rule.ok ? "text-green-600" : "text-on-surface-variant"
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">
+                                        {rule.ok ? "check_circle" : "radio_button_unchecked"}
+                                    </span>
+                                    {rule.label}
+                                </li>
+                            ))}
+                        </ul>
 
                         {/* Submit */}
                         <button
