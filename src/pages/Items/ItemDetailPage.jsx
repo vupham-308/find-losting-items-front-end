@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.js";
 import { getPostDetail, getPostVerifications, claimPost } from "../../services/postService.js";
+import { useChatStore } from "../../stores/chatStore.js";
 
 export default function ItemDetailPage() {
     const { id } = useParams();
@@ -22,6 +23,7 @@ export default function ItemDetailPage() {
     const [claimResult, setClaimResult] = useState(null);   // null | { approved, score, threshold, details }
     const [verificationLoading, setVerificationLoading] = useState(false);
     const [verificationError, setVerificationError] = useState("");
+    const { openChat } = useChatStore();
 
     // Fetch post detail
     useEffect(() => {
@@ -151,7 +153,8 @@ export default function ItemDetailPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
+        <>
+            <div className="min-h-screen bg-background">
             <main className="max-w-6xl mx-auto px-4 py-6 w-full">
 
                 {/* Back button */}
@@ -314,6 +317,58 @@ export default function ItemDetailPage() {
                                                 <span className="text-on-surface-variant">{claimResult.details.owner.email}</span>
                                             </div>
                                         )}
+                                        {/* Chat Button */}
+                                        <div className="pt-3 border-t border-outline-variant/20 mt-3">
+                                            <button
+                                                onClick={async () => {
+                                                    const uid1 = String(user.userId || user.id);
+                                                    const uid2 = String(claimResult.details.owner.user_id);
+                                                    if (uid1 === uid2) return;
+
+                                                    const sortedIds = [uid1, uid2].sort();
+                                                    const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
+
+                                                    try {
+                                                        const { doc, setDoc } = await import("firebase/firestore");
+                                                        const { db } = await import("../../firebase");
+                                                        await setDoc(doc(db, "chats", roomId), {
+                                                            id: roomId,
+                                                            postId: Number(post.post_id || post.id),
+                                                            postTitle: post.title || "Bài viết",
+                                                            postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                            user1Id: uid1,
+                                                            user1Name: user.full_name || user.name || "Người dùng",
+                                                            user2Id: uid2,
+                                                            user2Name: claimResult.details.owner.full_name || claimResult.details.owner.name || "Người đăng tin",
+                                                            users: [uid1, uid2]
+                                                        }, { merge: true });
+                                                    } catch (err) {
+                                                        console.error("Lỗi khi khởi tạo phòng chat:", err);
+                                                    }
+
+                                                    openChat({
+                                                        roomId,
+                                                        postId: post.post_id || post.id,
+                                                        postTitle: post.title,
+                                                        postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                        recipientId: claimResult.details.owner.user_id,
+                                                        recipientName: claimResult.details.owner.full_name || claimResult.details.owner.name || "Người đăng tin",
+                                                        shareTrigger: Date.now(),
+                                                        pendingPostShare: {
+                                                            postId: post.post_id || post.id,
+                                                            title: post.title,
+                                                            type: post.type,
+                                                            imageUrl: post.image_url || post.blurred_image_url || "",
+                                                            address: post.location?.address || "Không rõ địa điểm"
+                                                        }
+                                                    });
+                                                }}
+                                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">chat</span>
+                                                Nhắn tin trao đổi ngay
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -433,6 +488,8 @@ export default function ItemDetailPage() {
                     </div>
                 </div>
             </main>
+
         </div>
+        </>
     );
 }

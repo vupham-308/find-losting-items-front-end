@@ -134,8 +134,8 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                         </div>
 
                         {/* Right Column: Information */}
-                        <div className="w-full md:w-[55%] p-5 flex flex-col justify-between gap-3">
-                            <div className="space-y-2.5">
+                        <div className="w-full md:w-[55%] p-5 flex flex-col justify-between gap-4">
+                            <div className="space-y-4">
                                 {/* Badges */}
                                 <div className="flex flex-wrap gap-1.5">
                                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wider ${
@@ -191,8 +191,8 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Thông tin liên hệ</h4>
 
                                     {post.hide_post_type === "WHEN_MATCH" && !isOwner && (
-                                        <div className="flex items-start gap-1.5 mb-1.5 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-2">
-                                            <span className="material-symbols-outlined text-[14px] text-amber-600 mt-0.5 flex-shrink-0">info</span>
+                                        <div className="flex items-center gap-2 mb-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                            <span className="material-symbols-outlined text-[15px] text-amber-600 flex-shrink-0">info</span>
                                             <p className="text-[11px] text-amber-800 leading-snug">
                                                 Thông tin người nhặt sẽ được hiển thị sau khi bạn xác minh thành công
                                             </p>
@@ -260,26 +260,41 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     )}
                                 </div>
                             ) : (
-                                post.type === "FOUND" && post.hide_post_type !== "PUBLIC" && (
-                                    <div className="space-y-1.5 pt-1">
-                                        <p className="text-[11px] text-on-surface-variant text-center font-medium">
-                                            {post.owner?.phone || post.owner?.email
-                                                ? "Kiểm tra xem có đúng phải đồ bạn mất không"
-                                                : "Xác minh để xem thông tin liên hệ người đăng"
-                                            }
-                                        </p>
-                                        <button
-                                            onClick={() => {
-                                                onClose();
-                                                navigate(`/posts/${post.post_id || post.id}`);
-                                            }}
-                                            className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md active:scale-[0.98] transition-all cursor-pointer"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                                            Kiểm tra ngay
-                                        </button>
-                                    </div>
-                                )
+                                <>
+                                    {post.type === "FOUND" && post.hide_post_type !== "PUBLIC" && (
+                                        <div className="space-y-1.5 pt-1">
+                                            <p className="text-[11px] text-on-surface-variant text-center font-medium">
+                                                {post.owner?.phone || post.owner?.email
+                                                    ? "Kiểm tra xem có đúng phải đồ bạn mất không"
+                                                    : "Xác minh để xem thông tin liên hệ người đăng"
+                                                }
+                                            </p>
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    navigate(`/posts/${post.post_id || post.id}`);
+                                                }}
+                                                className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                                                Kiểm tra ngay
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* Safety tips for PUBLIC posts */}
+                                    {post.type === "FOUND" && post.hide_post_type === "PUBLIC" && (
+                                        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-left space-y-1 mt-1">
+                                            <h4 className="font-bold text-amber-800 text-[13px] flex items-center gap-1.5">
+                                                <span className="material-symbols-outlined text-[16px] text-amber-700">security</span>
+                                                Nguyên tắc an toàn
+                                            </h4>
+                                            <p className="text-[11.5px] text-amber-950/80 leading-relaxed">
+                                                Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

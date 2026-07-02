@@ -70,7 +70,7 @@ export default function SearchImageModal({ onClose }) {
     const [selectedPostId, setSelectedPostId] = useState(null);
     const resultsRef = useRef(null);
     const [description, setDescription] = useState("");
-    const [targetType, setTargetType] = useState("LOST");
+    const [targetType, setTargetType] = useState("FOUND");
     const [imageFile, setImageFile] = useState(null);
     
     const [results, setResults] = useState([]);
@@ -171,7 +171,7 @@ export default function SearchImageModal({ onClose }) {
                 <div className="text-center mb-6 px-6">
                     <h1 className="text-2xl md:text-3xl font-bold mb-1 text-primary">Tìm kiếm bằng hình ảnh</h1>
                     <p className="text-on-surface-variant text-[13px] md:text-[14px]">
-                        Tải ảnh vật phẩm và mô tả để AI tự động tìm tin đăng trùng khớp nhất.
+                        Bạn bị mất đồ? Tải ảnh vật phẩm và mô tả để AI tự động tìm tin đăng trùng khớp nhất.
                     </p>
                 </div>
 
@@ -186,33 +186,6 @@ export default function SearchImageModal({ onClose }) {
                 {/* Form and Upload layout */}
                 <div className="bg-surface-container-low/40 rounded-xl p-5 border border-outline-variant/20">
                     
-                    {/* Toggle Selector */}
-                    <div className="flex p-1 bg-surface-container rounded-xl mb-5">
-                        <button
-                            type="button"
-                            onClick={() => setTargetType("LOST")}
-                            className={`flex-1 py-2.5 rounded-lg text-sm font-bold text-center transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
-                                targetType === "LOST"
-                                    ? "bg-primary text-on-primary shadow-sm"
-                                    : "text-on-surface-variant hover:bg-surface-container-high"
-                            }`}
-                        >
-                            <AlertCircle size={16} />
-                            Tôi nhặt được đồ
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setTargetType("FOUND")}
-                            className={`flex-1 py-2.5 rounded-lg text-sm font-bold text-center transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer ${
-                                targetType === "FOUND"
-                                    ? "bg-primary text-on-primary shadow-sm"
-                                    : "text-on-surface-variant hover:bg-surface-container-high"
-                            }`}
-                        >
-                            <CheckCircle size={16} />
-                            Tôi bị mất đồ
-                        </button>
-                    </div>
 
                     {/* Form */}
                     <form onSubmit={handleFormSubmit} className="space-y-4">
