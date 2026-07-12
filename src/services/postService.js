@@ -104,3 +104,7 @@ export function updatePostStatus(id, status) {
 export function deletePost(id) {
     return axiosClient.delete(`${POST_ENDPOINTS.detail}/${id}`);
 }
+
+export function filterPosts(params) {
+    return axiosClient.get(POST_ENDPOINTS.filter, { params });
+}

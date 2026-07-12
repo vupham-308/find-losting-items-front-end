@@ -148,6 +148,14 @@ export default function CreatePost() {
         }
     }, [isGeneratingQuestions, submitClicked]);
 
+    // Set visibility to match automatically for found posts, public for lost posts
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            visibility: mode === 'found' ? 'match' : 'public'
+        }));
+    }, [mode]);
+
     // Tự động gọi suggest questions khi chuyển sang WHEN_MATCH và đã có ảnh
     useEffect(() => {
         if (mode === 'found' && formData.visibility === 'match' && images.length > 0 && verificationsList.length === 0) {
@@ -294,6 +302,16 @@ export default function CreatePost() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Check authentication before sending post
+        if (!user) {
+            setNotification({ message: 'Bạn cần đăng nhập để thực hiện đăng tin!', type: 'error' });
+            setTimeout(() => {
+                setNotification(null);
+                navigate('/login?redirect=/create-post');
+            }, 2000);
+            return;
+        }
+
         // Image validation in found mode (mandatory)
         if (mode === 'found' && images.length === 0) {
             setNotification({ message: 'Hình ảnh là bắt buộc đối với tin đăng tìm thấy!', type: 'error' });
@@ -353,7 +371,7 @@ export default function CreatePost() {
                 title: formData.title,
                 description: formData.description || null,
                 eventTime: formData.dateTime ? new Date(formData.dateTime).toISOString() : null,
-                userId: user ? (user.userId || user.id) : undefined,
+                userId: user.userId || user.id,
                 hidePostType: mode === 'found' && formData.visibility === 'match' ? 'WHEN_MATCH' : 'PUBLIC',
                 address: finalAddress,
                 district: finalDistrict,
@@ -362,8 +380,8 @@ export default function CreatePost() {
                 longitude: finalLon,
                 locationLevel: 0, // Always send 0 as requested
                 image: images.length > 0 ? images[0] : null,
-                phone: user ? user.phone : formData.phone,
-                name: user ? user.name : formData.name,
+                phone: user.phone || user.phone_number || "",
+                name: user.name || user.full_name || "Người dùng",
                 customQuestionsJson: customQuestionsJson
             };
             setNotification({ message: 'Đang tiến hành đăng tin...', type: 'info' });
@@ -438,7 +456,7 @@ export default function CreatePost() {
             }`}
           >
             <AlertCircle size={20} />
-            Báo mất đồ
+            Người mất
           </button>
           <button
             onClick={() => setMode('found')}
@@ -449,7 +467,7 @@ export default function CreatePost() {
             }`}
           >
             <CheckCircle size={20} />
-            Báo tìm thấy đồ
+            Người nhặt
           </button>
         </div>
 
@@ -609,105 +627,7 @@ export default function CreatePost() {
                 </div>
               </div>
 
-              {/* Remind logged-in user in Lost mode about public contact info */}
-              {mode === 'lost' && user && (
-                <div className="mt-4 flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
-                  <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
-                  <p className="font-body-sm text-on-surface">
-                    Thông tin số điện thoại của bạn sẽ được công khai để người nhặt có thể liên hệ.
-                  </p>
-                </div>
-              )}
 
-              {/* Contact Information Section */}
-              {(!user || mode === 'found') && (
-                <div className="pt-6 border-t border-outline-variant/30 mt-6">
-                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block mb-4">
-                    Thông tin liên hệ
-                  </label>
-
-                  {/* Lost Mode Contact Info */}
-                  {mode === 'lost' && !user && (
-                    <div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                          <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                            Họ và tên
-                          </label>
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                            placeholder="Ví dụ: Nguyễn Văn A"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                            Số điện thoại <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                            placeholder="Ví dụ: 090xxxxxxx"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-start gap-3">
-                        <Info size={20} className="text-secondary flex-shrink-0 mt-0.5" />
-                        <p className="font-body-sm text-on-secondary-fixed-variant">
-                          Thông tin số điện thoại của bạn sẽ được công khai để người nhặt có thể liên hệ.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Found Mode Contact Info */}
-                  {mode === 'found' && (
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-3">
-                        <label className="flex items-center gap-3 p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer hover:border-primary transition-all">
-                          <input
-                            type="radio"
-                            name="visibility"
-                            value="public"
-                            checked={formData.visibility === 'public'}
-                            onChange={handleInputChange}
-                            className="w-5 h-5 text-primary"
-                          />
-                          <div>
-                            <span className="font-body-lg font-bold block">Công khai</span>
-                            <p className="font-body-sm text-on-surface-variant">
-                              Ai cũng có thể thấy thông tin liên hệ của bạn.
-                            </p>
-                          </div>
-                        </label>
-                        <label className="flex items-center gap-3 p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer hover:border-primary transition-all">
-                          <input
-                            type="radio"
-                            name="visibility"
-                            value="match"
-                            checked={formData.visibility === 'match'}
-                            onChange={handleInputChange}
-                            className="w-5 h-5 text-primary"
-                          />
-                          <div>
-                            <span className="font-body-lg font-bold block">Công khai khi có người xác nhận (Match)</span>
-                            <p className="font-body-sm text-on-surface-variant">
-                              Chỉ hiển thị thông tin khi bạn xác nhận yêu cầu nhận lại đồ là chính xác.
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Inline verification questions for WHEN_MATCH */}
               {mode === 'found' && formData.visibility === 'match' && (

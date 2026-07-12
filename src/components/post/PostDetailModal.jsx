@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth.js";
+import { useChatStore } from "../../stores/chatStore.js";
 import * as postService from "../../services/postService.js";
 
 export default function PostDetailModal({ postId, onClose, onActionComplete }) {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { openChat } = useChatStore();
     const [post, setPost] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -171,12 +173,65 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     <div className="flex items-center gap-1">
                                         <span className="material-symbols-outlined text-[14px]">schedule</span>
                                         <span>
-                                            {post.created_at ? new Date(post.created_at).toLocaleString("vi-VN", {
-                                                year: 'numeric', month: '2-digit', day: '2-digit'
-                                            }) : "Chưa rõ"}
+                                            {post.created_at ? (() => {
+                                                const d = new Date(post.created_at);
+                                                d.setHours(d.getHours() + 7);
+                                                return d.toLocaleString("vi-VN", {
+                                                    year: 'numeric', month: '2-digit', day: '2-digit'
+                                                });
+                                            })() : "Chưa rõ"}
                                         </span>
                                     </div>
                                 </div>
+
+                                {/* Detailed Info Card */}
+                                {(post.event_time || post.eventTime || post.location?.address) && (
+                                    <div className="p-3 bg-surface-container-low border border-outline-variant/20 rounded-xl space-y-2 text-[12px] text-left">
+                                        <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Thông tin chi tiết</p>
+                                        <div className="space-y-1.5">
+                                            {/* Event Time */}
+                                            {(post.event_time || post.eventTime) && (
+                                                <div className="flex items-start gap-1.5">
+                                                    <span className="material-symbols-outlined text-[15px] text-primary mt-0.5">history</span>
+                                                    <div>
+                                                        <span className="text-[10px] text-on-surface-variant block">Thời gian {post.type === 'LOST' ? 'mất' : 'nhặt được'}</span>
+                                                        <span className="font-semibold text-on-surface">
+                                                            {(() => {
+                                                                const raw = post.event_time || post.eventTime;
+                                                                try {
+                                                                    const d = new Date(raw);
+                                                                    d.setHours(d.getHours() + 7);
+                                                                    return d.toLocaleString("vi-VN", {
+                                                                        day: "2-digit",
+                                                                        month: "2-digit",
+                                                                        year: "numeric",
+                                                                        hour: "2-digit",
+                                                                        minute: "2-digit"
+                                                                    });
+                                                                } catch {
+                                                                    return "Chưa rõ";
+                                                                }
+                                                            })()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Detailed Location */}
+                                            {post.location?.address && (
+                                                <div className="flex items-start gap-1.5">
+                                                    <span className="material-symbols-outlined text-[15px] text-primary mt-0.5">location_on</span>
+                                                    <div>
+                                                        <span className="text-[10px] text-on-surface-variant block">Địa điểm chi tiết</span>
+                                                        <span className="font-semibold text-on-surface leading-snug">
+                                                            {post.location.address}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Description */}
                                 <div>
@@ -188,39 +243,13 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
 
                                 {/* Owner Contact */}
                                 <div>
-                                    <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Thông tin liên hệ</h4>
-
-                                    {post.hide_post_type === "WHEN_MATCH" && !isOwner && (
-                                        <div className="flex items-center gap-2 mb-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                                            <span className="material-symbols-outlined text-[15px] text-amber-600 flex-shrink-0">info</span>
-                                            <p className="text-[11px] text-amber-800 leading-snug">
-                                                Thông tin người nhặt sẽ được hiển thị sau khi bạn xác minh thành công
-                                            </p>
-                                        </div>
-                                    )}
-                                    {post.owner ? (
+                                    <h4 className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1.5">Người đăng tin</h4>
+                                    {post.owner && (
                                         <div className="bg-primary/5 border border-primary/10 rounded-xl px-3 py-2 space-y-1.5 text-[12px]">
                                             <div className="flex items-center gap-1.5">
                                                 <span className="material-symbols-outlined text-[15px] text-primary">person</span>
                                                 <span className="font-semibold text-on-surface">{post.owner.full_name || post.owner.name || "N/A"}</span>
                                             </div>
-                                            {post.owner.phone && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="material-symbols-outlined text-[15px] text-primary">call</span>
-                                                    <a href={`tel:${post.owner.phone}`} className="text-primary hover:underline font-medium">{post.owner.phone}</a>
-                                                </div>
-                                            )}
-                                            {post.owner.email && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="material-symbols-outlined text-[15px] text-primary">mail</span>
-                                                    <span className="text-on-surface-variant">{post.owner.email}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="bg-surface-container-low border border-outline-variant/20 rounded-xl px-3 py-2 flex items-center gap-1.5 text-[12px] text-on-surface-variant">
-                                            <span className="material-symbols-outlined text-[15px] text-outline">lock</span>
-                                            <span>Thông tin liên hệ được bảo mật.</span>
                                         </div>
                                     )}
                                 </div>
@@ -260,14 +289,11 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     )}
                                 </div>
                             ) : (
-                                <>
-                                    {post.type === "FOUND" && post.hide_post_type !== "PUBLIC" && (
+                                <div className="space-y-3">
+                                    {post.type === "FOUND" && (
                                         <div className="space-y-1.5 pt-1">
                                             <p className="text-[11px] text-on-surface-variant text-center font-medium">
-                                                {post.owner?.phone || post.owner?.email
-                                                    ? "Kiểm tra xem có đúng phải đồ bạn mất không"
-                                                    : "Xác minh để xem thông tin liên hệ người đăng"
-                                                }
+                                                Vui lòng xác minh để liên hệ với người nhặt đồ.
                                             </p>
                                             <button
                                                 onClick={() => {
@@ -282,19 +308,81 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                         </div>
                                     )}
 
-                                    {/* Safety tips for PUBLIC posts */}
-                                    {post.type === "FOUND" && post.hide_post_type === "PUBLIC" && (
-                                        <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-left space-y-1 mt-1">
-                                            <h4 className="font-bold text-amber-800 text-[13px] flex items-center gap-1.5">
-                                                <span className="material-symbols-outlined text-[16px] text-amber-700">security</span>
-                                                Nguyên tắc an toàn
-                                            </h4>
-                                            <p className="text-[11.5px] text-amber-950/80 leading-relaxed">
-                                                Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
+                                    {post.type === "LOST" && (
+                                        <div className="space-y-1.5 pt-1">
+                                            <p className="text-[11px] text-on-surface-variant text-center font-medium">
+                                                Nhắn tin trực tiếp để trao đổi với người báo mất đồ.
                                             </p>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!user) {
+                                                        onClose();
+                                                        navigate(`/login?redirect=/posts/${post.post_id || post.id}`);
+                                                        return;
+                                                    }
+                                                    
+                                                    const uid1 = String(user.userId || user.id);
+                                                    const uid2 = String(post.owner?.user_id);
+                                                    if (uid1 === uid2) return;
+
+                                                    const sortedIds = [uid1, uid2].sort();
+                                                    const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
+
+                                                    try {
+                                                        const { doc, setDoc } = await import("firebase/firestore");
+                                                        const { db } = await import("../../firebase");
+                                                        await setDoc(doc(db, "chats", roomId), {
+                                                            id: roomId,
+                                                            postId: Number(post.post_id || post.id),
+                                                            postTitle: post.title || "Bài viết",
+                                                            postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                            user1Id: uid1,
+                                                            user1Name: user.full_name || user.name || "Người dùng",
+                                                            user2Id: uid2,
+                                                            user2Name: post.owner?.full_name || post.owner?.name || "Người đăng tin",
+                                                            users: [uid1, uid2]
+                                                        }, { merge: true });
+                                                    } catch (err) {
+                                                        console.error("Lỗi khi khởi tạo phòng chat:", err);
+                                                    }
+
+                                                    onClose();
+                                                    openChat({
+                                                        roomId,
+                                                        postId: post.post_id || post.id,
+                                                        postTitle: post.title,
+                                                        postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                        recipientId: post.owner?.user_id,
+                                                        recipientName: post.owner?.full_name || post.owner?.name || "Người đăng tin",
+                                                        shareTrigger: Date.now(),
+                                                        pendingPostShare: {
+                                                            postId: post.post_id || post.id,
+                                                            title: post.title,
+                                                            type: post.type,
+                                                            imageUrl: post.image_url || post.blurred_image_url || "",
+                                                            address: post.location?.address || "Không rõ địa điểm"
+                                                        }
+                                                    });
+                                                }}
+                                                className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md active:scale-[0.98] transition-all cursor-pointer"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">chat</span>
+                                                Nhắn tin ngay
+                                            </button>
                                         </div>
                                     )}
-                                </>
+
+                                    {/* Safety tips */}
+                                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-left space-y-1 mt-1">
+                                        <h4 className="font-bold text-amber-800 text-[13px] flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-[16px] text-amber-700">security</span>
+                                            Nguyên tắc an toàn
+                                        </h4>
+                                        <p className="text-[11.5px] text-amber-950/80 leading-relaxed">
+                                            Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
+                                        </p>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </div>

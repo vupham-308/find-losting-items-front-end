@@ -804,13 +804,17 @@ export default function ProfilePage() {
                             <div className="grid gap-4">
                                 {myPosts.map((post) => {
                                     const isLost = post.type === "LOST";
-                                    const formattedDate = post.created_at || post.createdAt
-                                        ? new Date(post.created_at || post.createdAt).toLocaleDateString("vi-VN", {
+                                    const formattedDate = (() => {
+                                        const raw = post.created_at || post.createdAt;
+                                        if (!raw) return "Không rõ ngày";
+                                        const d = new Date(raw);
+                                        d.setHours(d.getHours() + 7);
+                                        return d.toLocaleDateString("vi-VN", {
                                             year: "numeric",
                                             month: "long",
                                             day: "numeric",
-                                        })
-                                        : "Không rõ ngày";
+                                        });
+                                    })();
 
                                     return (
                                         <div

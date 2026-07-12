@@ -1,81 +1,14 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { searchImage } from "../../services/postService.js";
-import { ImagePlus, Search, AlertCircle, CheckCircle, X } from "lucide-react";
-import PostDetailModal from "./PostDetailModal.jsx";
-
-function ItemCard({ item, onClick }) {
-    const type = item.type || "LOST";
-    const imgUrl = item.image_url || item.imageUrl || item.image || "https://placehold.co/600x400?text=No+Image";
-    const districtName = item.location?.district || item.district || "Không rõ khu vực";
-
-    const hasMatchScore = item.match_score !== undefined && item.match_score !== null;
-    const scoreVal = hasMatchScore ? item.match_score * 100 : 0;
-    const matchPercent = scoreVal % 1 === 0 ? scoreVal.toFixed(0) : scoreVal.toFixed(1);
-
-    const formatEventTime = (isoString) => {
-        if (!isoString) return "Không rõ thời gian";
-        try {
-            const date = new Date(isoString);
-            return date.toLocaleDateString('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch {
-            return "Không rõ thời gian";
-        }
-    };
-
-    return (
-        <div onClick={onClick} className="cursor-pointer bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all border border-outline-variant/30 group flex flex-col justify-between h-full text-left">
-            <div>
-                <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
-                    <img
-                        src={imgUrl}
-                        alt={item.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {hasMatchScore && (
-                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[11px] font-bold bg-primary text-white shadow-md">
-                            Khớp: {matchPercent}%
-                        </span>
-                    )}
-                    <span className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
-                        type === "LOST"
-                            ? "bg-error-container text-on-error-container border border-error/20"
-                            : "bg-primary-container text-on-primary-container border border-primary/20"
-                    }`}>
-                        {type}
-                    </span>
-                </div>
-                <div className="p-3">
-                    <h3 className="text-[16px] font-semibold mb-1 line-clamp-1 text-on-surface">{item.title}</h3>
-                    <div className="flex items-center gap-1.5 text-[12px] text-on-surface-variant mb-0.5">
-                        <span className="material-symbols-outlined text-[15px]">location_on</span>
-                        <span>{districtName}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[12px] text-on-surface-variant">
-                        <span className="material-symbols-outlined text-[15px]">schedule</span>
-                        <span>{formatEventTime(item.created_at || item.createdAt || item.eventTime)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+import { usePostStore } from "../../stores/postStore.js";
+import { ImagePlus, Search, AlertCircle, X } from "lucide-react";
 
 export default function SearchImageModal({ onClose }) {
-    const [selectedPostId, setSelectedPostId] = useState(null);
-    const resultsRef = useRef(null);
     const [description, setDescription] = useState("");
     const [targetType, setTargetType] = useState("FOUND");
     const [imageFile, setImageFile] = useState(null);
     
-    const [results, setResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [hasSearched, setHasSearched] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
 
     const handleImageChange = (e) => {
@@ -100,7 +33,6 @@ export default function SearchImageModal({ onClose }) {
 
         setIsSearching(true);
         setErrorMessage("");
-        setHasSearched(false);
 
         try {
             const formData = new FormData();
@@ -140,11 +72,17 @@ export default function SearchImageModal({ onClose }) {
                     created_at: item.created_at || item.event_time
                 }));
 
-            setResults(normalized);
-            setHasSearched(true);
-            setTimeout(() => {
-                resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 100);
+            // Save search results into Zustand store and close popup
+            usePostStore.setState({
+                postsList: normalized,
+                isSearchResult: true,
+                isImageSearchResult: true,
+                totalPages: 1,
+                currentPage: 0,
+                activeType: targetType // Auto-switch to matched tab (FOUND/LOST)
+            });
+            
+            onClose();
         } catch (err) {
             console.error("Lỗi khi tìm kiếm đa phương thức:", err);
             setErrorMessage(err.message || "Đã xảy ra lỗi trong quá trình tìm kiếm AI. Vui lòng thử lại.");
@@ -158,7 +96,7 @@ export default function SearchImageModal({ onClose }) {
             {/* Click outside to close */}
             <div className="absolute inset-0" onClick={onClose} />
 
-            <div className="bg-surface-container-lowest rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-outline-variant/30 text-left relative flex flex-col z-10 animate-in fade-in zoom-in duration-200 p-6 md:p-8">
+            <div className="bg-surface-container-lowest rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-outline-variant/30 text-left relative flex flex-col z-10 animate-in fade-in zoom-in duration-200 p-6 md:p-8">
                 {/* Close Button */}
                 <button
                     onClick={onClose}
@@ -171,7 +109,7 @@ export default function SearchImageModal({ onClose }) {
                 <div className="text-center mb-6 px-6">
                     <h1 className="text-2xl md:text-3xl font-bold mb-1 text-primary">Tìm kiếm bằng hình ảnh</h1>
                     <p className="text-on-surface-variant text-[13px] md:text-[14px]">
-                        Bạn bị mất đồ? Tải ảnh vật phẩm và mô tả để AI tự động tìm tin đăng trùng khớp nhất.
+                        Tải ảnh vật phẩm và mô tả để AI tự động tìm tin đăng trùng khớp nhất.
                     </p>
                 </div>
 
@@ -186,9 +124,9 @@ export default function SearchImageModal({ onClose }) {
                 {/* Form and Upload layout */}
                 <div className="bg-surface-container-low/40 rounded-xl p-5 border border-outline-variant/20">
                     
-
                     {/* Form */}
                     <form onSubmit={handleFormSubmit} className="space-y-4">
+
                         {/* Image Upload Area */}
                         <div className="space-y-1 text-left">
                             <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
@@ -247,41 +185,10 @@ export default function SearchImageModal({ onClose }) {
                             className="w-full py-3 bg-primary text-on-primary rounded-xl font-bold hover:opacity-95 transition-all text-sm flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50 disabled:pointer-events-none"
                         >
                             <Search size={16} />
-                            {isSearching ? "Đang phân tích hình ảnh & tìm kiếm..." : "Bắt đầu đối soát AI"}
+                            {isSearching ? "Đang tìm kiếm..." : "Tìm kiếm"}
                         </button>
                     </form>
                 </div>
-
-                {/* Results Section */}
-                {hasSearched && (
-                    <div ref={resultsRef} className="space-y-4 mt-6">
-                        <div className="border-t border-outline-variant/20 pt-4 text-left">
-                            <h2 className="text-[17px] font-bold text-on-surface">Kết quả AI đối soát trùng khớp</h2>
-                            <p className="text-[12px] text-on-surface-variant">Sắp xếp theo độ tin cậy trùng khớp giảm dần</p>
-                        </div>
-
-                        {results.length === 0 ? (
-                            <div className="text-center py-10 bg-surface-container-low rounded-xl border border-dashed border-outline-variant/60">
-                                <span className="material-symbols-outlined text-[36px] text-outline mb-1.5 block">folder_open</span>
-                                <h3 className="text-[15px] font-bold mb-0.5 text-on-surface">Không tìm thấy bài viết trùng khớp</h3>
-                                <p className="text-on-surface-variant text-[12px]">AI không phát hiện bất kỳ bài viết nào khớp với mô tả và hình ảnh này.</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                                {results.map((item) => (
-                                    <ItemCard key={item.id} item={item} onClick={() => setSelectedPostId(item.id)} />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {selectedPostId && (
-                    <PostDetailModal
-                        postId={selectedPostId}
-                        onClose={() => setSelectedPostId(null)}
-                    />
-                )}
             </div>
         </div>
     );
