@@ -166,8 +166,8 @@ export default function Header() {
                                                                     await setDoc(doc(db, "chats", room.id), {
                                                                         [`unread_${currentUserId}`]: 0
                                                                     }, { merge: true })
-                                                                } catch (err) {
-                                                                    console.error("Lỗi khi xóa unread:", err)
+                                                                } catch {
+                                                                    // Im lặng bỏ qua nếu quyền Firestore chưa cho phép
                                                                 }
                                                                 openChat({
                                                                     roomId: room.id,

@@ -127,8 +127,8 @@ export default function DockedChatBox({ chat, currentUser }) {
         const roomRef = doc(db, "chats", roomId);
         setDoc(roomRef, {
             [`unread_${currentUserId}`]: 0
-        }, { merge: true }).catch(err => {
-            console.error("Lỗi khi xóa unread ở docked chat:", err);
+        }, { merge: true }).catch(() => {
+            // Im lặng bỏ qua nếu quyền Firestore chưa cho phép
         });
     }, [roomId, currentUserId, isMinimized, messages.length]);
 
