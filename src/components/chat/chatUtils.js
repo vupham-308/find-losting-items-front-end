@@ -1,13 +1,20 @@
 // Tiện ích dùng chung cho các thành phần chat (DockedChatBox, ChatModal).
 
-// Chuyển Firestore Timestamp / Date / số về mili-giây. Trả 0 nếu không xác định.
+// Chuyển Firestore Timestamp / Date / số / chuỗi về mili-giây. Trả 0 nếu không xác định.
 export function toMillis(ts) {
     if (!ts) return 0;
     if (typeof ts.toMillis === "function") return ts.toMillis();
     if (typeof ts.seconds === "number") return ts.seconds * 1000;
     if (ts instanceof Date) return ts.getTime();
     if (typeof ts === "number") return ts;
+    if (typeof ts === "string") return new Date(ts).getTime() || 0;
     return 0;
+}
+
+// Lấy mốc thời gian mới nhất của phòng chat (gồm lastMessageAt, updatedAt, createdAt) để sắp xếp.
+export function getRoomTime(room) {
+    if (!room) return 0;
+    return toMillis(room.lastMessageAt) || toMillis(room.updatedAt) || toMillis(room.createdAt) || 0;
 }
 
 // Giờ hiển thị cạnh bong bóng tin nhắn, vd "14:05".

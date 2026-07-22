@@ -93,16 +93,6 @@ export default function TermsOfService() {
             </p>
           </section>
 
-          {/* Section 6 */}
-          <section className="space-y-3">
-            <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px]">contact_support</span>
-              6. Liên hệ khiếu nại
-            </h2>
-            <p className="text-sm">
-              Mọi ý kiến đóng góp hoặc phản ánh tin đăng giả mạo xin vui lòng liên hệ Ban quản trị qua email: <a href="mailto:support@saigontimdo.vn" className="text-primary underline font-semibold">support@saigontimdo.vn</a>.
-            </p>
-          </section>
         </div>
       </div>
     </main>

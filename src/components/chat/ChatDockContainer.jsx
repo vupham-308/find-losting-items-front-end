@@ -1,6 +1,30 @@
+import React from "react";
 import { useChatStore } from "../../stores/chatStore.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import DockedChatBox from "./DockedChatBox.jsx";
+
+class ChatErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+    }
+    static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+    }
+    componentDidCatch(error, errorInfo) {
+        console.error("Lỗi giao diện khung chat:", error, errorInfo);
+    }
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-3 bg-red-50 text-red-700 text-[11px] rounded-xl border border-red-200 shadow-lg max-w-xs pointer-events-auto">
+                    ⚠️ Lỗi hiển thị chat: {this.state.error?.message || "Lỗi không xác định"}
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
 
 export default function ChatDockContainer() {
     const { activeChats } = useChatStore();
@@ -15,8 +39,9 @@ export default function ChatDockContainer() {
                     key={chat.roomId}
                     className="pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300"
                 >
-
-                    <DockedChatBox chat={chat} currentUser={user} />
+                    <ChatErrorBoundary>
+                        <DockedChatBox chat={chat} currentUser={user} />
+                    </ChatErrorBoundary>
                 </div>
             ))}
         </div>

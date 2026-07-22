@@ -146,6 +146,64 @@ export default function HomePage() {
         }
     }, [isImageSearchResult]);
 
+    const getTodayDateString = () => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const getTodayFormatted = () => {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const getCurrentTimeString = () => {
+        const today = new Date();
+        const hh = String(today.getHours()).padStart(2, '0');
+        const mm = String(today.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    };
+
+    useEffect(() => {
+        if (!filterDate) return;
+        const [d, m, y] = filterDate.split("/");
+        if (!d || !m || !y || y.length < 4) return;
+
+        const today = new Date();
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const selectedDate = new Date(Number(y), Number(m) - 1, Number(d));
+
+        if (selectedDate > todayDateOnly) {
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            setFilterDate(`${dd}/${mm}/${yyyy}`);
+            
+            if (filterTime) {
+                const [hours, minutes] = filterTime.split(":");
+                const selectedDateTime = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hours), Number(minutes));
+                if (selectedDateTime > today) {
+                    const hh = String(today.getHours()).padStart(2, '0');
+                    const min = String(today.getMinutes()).padStart(2, '0');
+                    setFilterTime(`${hh}:${min}`);
+                }
+            }
+        } else if (selectedDate.getTime() === todayDateOnly.getTime() && filterTime) {
+            const [hours, minutes] = filterTime.split(":");
+            const selectedDateTime = new Date(Number(y), Number(m) - 1, Number(d), Number(hours), Number(minutes));
+            if (selectedDateTime > today) {
+                const hh = String(today.getHours()).padStart(2, '0');
+                const min = String(today.getMinutes()).padStart(2, '0');
+                setFilterTime(`${hh}:${min}`);
+            }
+        }
+    }, [filterDate, filterTime]);
+
     const handleSearchSubmit = () => {
         executeSearch();
     };
@@ -252,6 +310,7 @@ export default function HomePage() {
                                 <input
                                     type="date"
                                     ref={sidebarDatePickerRef}
+                                    max={getTodayDateString()}
                                     onChange={(e) => {
                                         const val = e.target.value;
                                         if (val) {
@@ -283,6 +342,7 @@ export default function HomePage() {
                                 value={filterTime}
                                 onChange={(e) => setFilterTime(e.target.value)}
                                 disabled={!filterDate}
+                                max={filterDate === getTodayFormatted() ? getCurrentTimeString() : undefined}
                                 className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold disabled:opacity-50 cursor-pointer"
                             />
                         </div>
@@ -423,6 +483,7 @@ export default function HomePage() {
                                     <input
                                         type="date"
                                         ref={mobileDatePickerRef}
+                                        max={getTodayDateString()}
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             if (val) {
@@ -454,6 +515,7 @@ export default function HomePage() {
                                     value={filterTime}
                                     onChange={(e) => setFilterTime(e.target.value)}
                                     disabled={!filterDate}
+                                    max={filterDate === getTodayFormatted() ? getCurrentTimeString() : undefined}
                                     placeholder="HH:mm"
                                     className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold disabled:opacity-50 cursor-pointer"
                                 />

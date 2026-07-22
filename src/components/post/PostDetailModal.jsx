@@ -311,31 +311,62 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                     {post.type === "LOST" && (
                                         <div className="space-y-1.5 pt-1">
                                             <p className="text-[11px] text-on-surface-variant text-center font-medium">
-                                                Nhắn tin trực tiếp để trao đổi với người báo mất đồ.
+                                                Gửi yêu cầu nhắn tin để trao đổi với người báo mất đồ.
                                             </p>
                                             <button
-                                                onClick={async () => {
+                                                onClick={() => {
                                                     if (!user) {
                                                         onClose();
                                                         navigate(`/login?redirect=/posts/${post.post_id || post.id}`);
                                                         return;
                                                     }
                                                     
-                                                    const uid1 = String(user.userId || user.id);
-                                                    const uid2 = String(post.owner?.user_id);
+                                                    const currentUid = user.userId || user.id || user.user_id;
+                                                    const ownerUid = post?.owner?.user_id || post?.owner?.id || post?.owner_id;
+                                                    if (!currentUid || !ownerUid) return;
+
+                                                    const uid1 = String(currentUid);
+                                                    const uid2 = String(ownerUid);
                                                     if (uid1 === uid2) return;
 
                                                     const sortedIds = [uid1, uid2].sort();
-                                                    const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
+                                                    const roomId = `user_${sortedIds[0]}_${sortedIds[1]}`;
 
-                                                    // Khởi tạo phòng chat ở nền: setDoc chỉ resolve khi server xác nhận,
-                                                    // nên không await ở đây — nếu không khung chat sẽ không bao giờ mở
-                                                    // khi Firestore chưa kết nối được.
+                                                    // Background Firestore room creation
                                                     (async () => {
                                                         try {
-                                                            const { doc, setDoc } = await import("firebase/firestore");
+                                                            const { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp } = await import("firebase/firestore");
                                                             const { db } = await import("../../firebase");
-                                                            await setDoc(doc(db, "chats", roomId), {
+                                                            const roomRef = doc(db, "chats", roomId);
+                                                            const roomSnap = await getDoc(roomRef);
+
+                                                            const postTypeUpper = (post.type || post.postType || "LOST").toUpperCase();
+                                                            const isLostPost = postTypeUpper === "LOST";
+
+                                                            let initialStatus = isLostPost ? "PENDING" : "ACCEPTED";
+
+                                                            if (isLostPost) {
+                                                                if (roomSnap.exists()) {
+                                                                    const data = roomSnap.data();
+                                                                    initialStatus = data.status === "ACCEPTED" ? "ACCEPTED" : (data.status || "PENDING");
+                                                                } else {
+                                                                    const q = query(
+                                                                        collection(db, "chats"),
+                                                                        where("users", "array-contains", uid1)
+                                                                    );
+                                                                    const snapshot = await getDocs(q);
+                                                                    snapshot.forEach((docSnap) => {
+                                                                        const data = docSnap.data();
+                                                                        if (Array.isArray(data.users) && data.users.some(u => String(u) === String(uid2))) {
+                                                                            if (data.status === "ACCEPTED") {
+                                                                                initialStatus = "ACCEPTED";
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }
+
+                                                            await setDoc(roomRef, {
                                                                 id: roomId,
                                                                 postId: Number(post.post_id || post.id),
                                                                 postTitle: post.title || "Bài viết",
@@ -344,20 +375,24 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                                                 user1Name: user.full_name || user.name || "Người dùng",
                                                                 user2Id: uid2,
                                                                 user2Name: post.owner?.full_name || post.owner?.name || "Người đăng tin",
-                                                                users: [uid1, uid2]
+                                                                users: [uid1, uid2],
+                                                                postType: "LOST",
+                                                                status: initialStatus,
+                                                                requestedBy: uid1,
+                                                                requestedTo: uid2,
+                                                                updatedAt: serverTimestamp()
                                                             }, { merge: true });
                                                         } catch (err) {
                                                             console.error("Lỗi khi khởi tạo phòng chat:", err);
                                                         }
                                                     })();
 
-                                                    onClose();
                                                     openChat({
                                                         roomId,
                                                         postId: post.post_id || post.id,
                                                         postTitle: post.title,
                                                         postImageUrl: post.image_url || post.blurred_image_url || "",
-                                                        recipientId: post.owner?.user_id,
+                                                        recipientId: ownerUid,
                                                         recipientName: post.owner?.full_name || post.owner?.name || "Người đăng tin",
                                                         shareTrigger: Date.now(),
                                                         pendingPostShare: {
@@ -368,11 +403,12 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
                                                             address: post.location?.address || "Không rõ địa điểm"
                                                         }
                                                     });
+                                                    onClose();
                                                 }}
                                                 className="w-full inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[13px] font-bold shadow-md active:scale-[0.98] transition-all cursor-pointer"
                                             >
                                                 <span className="material-symbols-outlined text-[16px]">chat</span>
-                                                Nhắn tin ngay
+                                                Yêu cầu gửi tin nhắn
                                             </button>
                                         </div>
                                     )}

@@ -6,6 +6,7 @@ import { db } from "../../firebase.js"
 import { useChatStore } from "../../stores/chatStore.js"
 import { Search } from "lucide-react"
 import ChatModal from "../chat/ChatModal.jsx"
+import { getRoomTime } from "../chat/chatUtils.js"
 
 // Messenger-style time formatting helper
 const formatLastMessageTime = (timestamp) => {
@@ -49,12 +50,8 @@ export default function Header() {
             snapshot.forEach((doc) => {
                 rooms.push({ id: doc.id, ...doc.data() })
             })
-            // Sort in-memory to prevent indexing requirements
-            rooms.sort((a, b) => {
-                const timeA = a.lastMessageAt?.seconds || a.lastMessageAt?.toMillis?.() || 0
-                const timeB = b.lastMessageAt?.seconds || b.lastMessageAt?.toMillis?.() || 0
-                return timeB - timeA
-            })
+            // Sort in-memory descending by newest activity time
+            rooms.sort((a, b) => getRoomTime(b) - getRoomTime(a))
             setChatRooms(rooms)
         }, (err) => {
             console.error("Lỗi khi tải danh sách tin nhắn header:", err)
@@ -189,12 +186,24 @@ export default function Header() {
                                                                 <span className="material-symbols-outlined text-[28px]">person</span>
                                                             </div>
                                                             
-                                                            {/* Text info block */}
-                                                            <div className="min-w-0 flex-1">
-                                                                <h4 className={`text-[14.5px] text-slate-900 truncate ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
-                                                                <p className="text-[11px] text-primary truncate mb-0.5 font-medium">
-                                                                    Bài viết: {room.postTitle}
-                                                                </p>
+                                                             {/* Text info block */}
+                                                             <div className="min-w-0 flex-1 text-left">
+                                                                 <div className="flex items-center gap-1.5 flex-wrap">
+                                                                     <h4 className={`text-[14.5px] text-slate-900 truncate ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
+                                                                     {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
+                                                                         <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                             Chờ duyệt
+                                                                         </span>
+                                                                     )}
+                                                                     {room.postType === "LOST" && room.status === "REJECTED" && (
+                                                                         <span className="px-1.5 py-0.5 rounded bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
+                                                                             Từ chối
+                                                                         </span>
+                                                                     )}
+                                                                 </div>
+                                                                 <p className="text-[11px] text-primary truncate mb-0.5 font-medium">
+                                                                     Bài viết: {room.postTitle}
+                                                                 </p>
                                                                 {room.lastMessage && (
                                                                     <p className={`text-[12.5px] truncate ${isUnread ? "text-slate-900 font-bold" : "text-slate-500 font-medium"}`}>
                                                                         {room.lastSenderId === currentUserId ? "Bạn: " : ""}{room.lastMessage}

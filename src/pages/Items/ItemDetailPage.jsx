@@ -335,7 +335,7 @@ export default function ItemDetailPage() {
                                                     if (uid1 === uid2) return;
 
                                                     const sortedIds = [uid1, uid2].sort();
-                                                    const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
+                                                    const roomId = `user_${sortedIds[0]}_${sortedIds[1]}`;
 
                                                     // Không await: setDoc chỉ resolve khi server xác nhận,
                                                     // sẽ treo vô hạn nếu Firestore chưa kết nối được.
@@ -394,43 +394,89 @@ export default function ItemDetailPage() {
                                 <div className="space-y-1">
                                     <h3 className="font-bold text-[16px] text-on-surface">Liên hệ trao đổi về tin báo mất</h3>
                                     <p className="text-[13px] text-on-surface-variant">
-                                        Nhấn nút bên dưới để nhắn tin trực tiếp với <strong className="text-primary">{post.owner?.full_name || "người đăng tin"}</strong>.
+                                        Nhấn nút bên dưới để gửi yêu cầu nhắn tin trao đổi với <strong className="text-primary">{post.owner?.full_name || "người đăng tin"}</strong>.
                                     </p>
                                 </div>
                                 <div className="pt-2">
                                     <button
-                                        onClick={async () => {
-                                            const uid1 = String(user.userId || user.id);
-                                            const uid2 = String(post.owner?.user_id);
+                                        onClick={() => {
+                                            if (!user) {
+                                                navigate(`/login?redirect=/posts/${post.post_id || post.id}`);
+                                                return;
+                                            }
+
+                                            const currentUid = user.userId || user.id || user.user_id;
+                                            const ownerUid = post?.owner?.user_id || post?.owner?.id || post?.owner_id;
+                                            if (!currentUid || !ownerUid) return;
+
+                                            const uid1 = String(currentUid);
+                                            const uid2 = String(ownerUid);
                                             if (uid1 === uid2) return;
 
                                             const sortedIds = [uid1, uid2].sort();
-                                            const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
+                                            const roomId = `user_${sortedIds[0]}_${sortedIds[1]}`;
 
-                                            try {
-                                                const { doc, setDoc } = await import("firebase/firestore");
-                                                const { db } = await import("../../firebase");
-                                                await setDoc(doc(db, "chats", roomId), {
-                                                    id: roomId,
-                                                    postId: Number(post.post_id || post.id),
-                                                    postTitle: post.title || "Bài viết",
-                                                    postImageUrl: post.image_url || post.blurred_image_url || "",
-                                                    user1Id: uid1,
-                                                    user1Name: user.full_name || user.name || "Người dùng",
-                                                    user2Id: uid2,
-                                                    user2Name: post.owner?.full_name || post.owner?.name || "Người đăng tin",
-                                                    users: [uid1, uid2]
-                                                }, { merge: true });
-                                            } catch (err) {
-                                                console.error("Lỗi khi khởi tạo phòng chat:", err);
-                                            }
+                                            // Background Firestore room creation
+                                            (async () => {
+                                                try {
+                                                    const { doc, setDoc, getDoc, collection, query, where, getDocs, serverTimestamp } = await import("firebase/firestore");
+                                                    const { db } = await import("../../firebase");
+                                                    const roomRef = doc(db, "chats", roomId);
+                                                    const roomSnap = await getDoc(roomRef);
+
+                                                    const postTypeUpper = (post.type || post.postType || "LOST").toUpperCase();
+                                                    const isLostPost = postTypeUpper === "LOST";
+
+                                                    let initialStatus = isLostPost ? "PENDING" : "ACCEPTED";
+
+                                                    if (isLostPost) {
+                                                        if (roomSnap.exists()) {
+                                                            const data = roomSnap.data();
+                                                            initialStatus = data.status === "ACCEPTED" ? "ACCEPTED" : (data.status || "PENDING");
+                                                        } else {
+                                                            const q = query(
+                                                                collection(db, "chats"),
+                                                                where("users", "array-contains", uid1)
+                                                            );
+                                                            const snapshot = await getDocs(q);
+                                                            snapshot.forEach((docSnap) => {
+                                                                const data = docSnap.data();
+                                                                if (Array.isArray(data.users) && data.users.some(u => String(u) === String(uid2))) {
+                                                                    if (data.status === "ACCEPTED") {
+                                                                        initialStatus = "ACCEPTED";
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+                                                    }
+
+                                                    await setDoc(roomRef, {
+                                                        id: roomId,
+                                                        postId: Number(post.post_id || post.id),
+                                                        postTitle: post.title || "Bài viết",
+                                                        postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                        user1Id: uid1,
+                                                        user1Name: user.full_name || user.name || "Người dùng",
+                                                        user2Id: uid2,
+                                                        user2Name: post.owner?.full_name || post.owner?.name || "Người đăng tin",
+                                                        users: [uid1, uid2],
+                                                        postType: "LOST",
+                                                        status: initialStatus,
+                                                        requestedBy: uid1,
+                                                        requestedTo: uid2,
+                                                        updatedAt: serverTimestamp()
+                                                    }, { merge: true });
+                                                } catch (err) {
+                                                    console.error("Lỗi khi khởi tạo phòng chat:", err);
+                                                }
+                                            })();
 
                                             openChat({
                                                 roomId,
                                                 postId: post.post_id || post.id,
                                                 postTitle: post.title,
                                                 postImageUrl: post.image_url || post.blurred_image_url || "",
-                                                recipientId: post.owner?.user_id,
+                                                recipientId: ownerUid,
                                                 recipientName: post.owner?.full_name || post.owner?.name || "Người đăng tin",
                                                 shareTrigger: Date.now(),
                                                 pendingPostShare: {
@@ -445,7 +491,7 @@ export default function ItemDetailPage() {
                                         className="w-full px-6 py-3 bg-primary text-on-primary hover:opacity-90 rounded-xl text-[14px] font-bold shadow-md cursor-pointer flex items-center justify-center gap-2"
                                     >
                                         <span className="material-symbols-outlined text-[18px]">chat</span>
-                                        Nhắn tin trao đổi ngay
+                                        Yêu cầu gửi tin nhắn
                                     </button>
                                 </div>
                             </section>

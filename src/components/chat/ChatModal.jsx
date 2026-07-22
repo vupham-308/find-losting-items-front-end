@@ -8,6 +8,7 @@ import {
     formatRelativeTime,
     getInitials,
     getAvatarGradient,
+    getRoomTime,
 } from "./chatUtils.js";
 
 export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, defaultPostTitle, defaultPostImage, defaultRecipientName, currentUser }) {
@@ -18,12 +19,12 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
     // Suy ra ngay khi render để không phải setState trong effect.
     // Công thức: postId_minUserId_maxUserId
     const defaultRoomId = (() => {
-        if (!currentUserId || !defaultPostId || !defaultRecipientId) return null;
+        if (!currentUserId || !defaultRecipientId) return null;
         const uid1 = String(currentUserId);
         const uid2 = String(defaultRecipientId);
         if (uid1 === uid2) return null; // Không thể tự nhắn cho chính mình
         const sortedIds = [uid1, uid2].sort();
-        return `${defaultPostId}_${sortedIds[0]}_${sortedIds[1]}`;
+        return `user_${sortedIds[0]}_${sortedIds[1]}`;
     })();
 
     const [chatRooms, setChatRooms] = useState([]);
@@ -50,12 +51,8 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
             snapshot.forEach((doc) => {
                 rooms.push({ id: doc.id, ...doc.data() });
             });
-            // Sort in-memory to prevent Firestore composite index errors
-            rooms.sort((a, b) => {
-                const timeA = a.lastMessageAt?.seconds || a.lastMessageAt?.toMillis?.() || 0;
-                const timeB = b.lastMessageAt?.seconds || b.lastMessageAt?.toMillis?.() || 0;
-                return timeB - timeA;
-            });
+            // Sort in-memory descending by newest activity time
+            rooms.sort((a, b) => getRoomTime(b) - getRoomTime(a));
             setChatRooms(rooms);
             setChatError("");
         }, (err) => {
@@ -146,7 +143,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
     // Determine recipient name
     const getRecipientName = (room) => {
         if (!room) return "Người dùng";
-        return room.user1Id === currentUserId ? room.user2Name : room.user1Name;
+        return String(room.user1Id) === String(currentUserId) ? room.user2Name : room.user1Name;
     };
 
     // 4. Send Message
@@ -157,7 +154,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
         const textToSend = newMessage.trim();
         setNewMessage("");
 
-        const recipientId = currentRoom.user1Id === currentUserId ? currentRoom.user2Id : currentRoom.user1Id;
+        const recipientId = String(currentRoom.user1Id) === String(currentUserId) ? currentRoom.user2Id : currentRoom.user1Id;
 
         try {
             // Add message
@@ -312,10 +309,20 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                                 </div>
 
                                                 <div className="min-w-0 flex-1">
-                                                    <div className="flex items-baseline gap-2">
+                                                    <div className="flex items-center justify-between gap-2">
                                                         <h4 className={`text-[13.5px] truncate flex-1 text-on-surface ${isUnread ? "font-extrabold" : "font-semibold"}`}>
                                                             {name}
                                                         </h4>
+                                                        {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
+                                                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                Chờ duyệt
+                                                            </span>
+                                                        )}
+                                                        {room.postType === "LOST" && room.status === "REJECTED" && (
+                                                            <span className="px-1.5 py-0.5 rounded-md bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
+                                                                Từ chối
+                                                            </span>
+                                                        )}
                                                         <span className="text-[10px] text-on-surface-variant/70 shrink-0">
                                                             {formatRelativeTime(room.lastMessageAt)}
                                                         </span>
@@ -385,118 +392,224 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                 </div>
 
                                 {/* Messages */}
-                                <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
-                                    {decorated.length === 0 ? (
-                                        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-8">
-                                            <div
-                                                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[20px] font-bold shadow-lg"
-                                                style={{ backgroundImage: getAvatarGradient(recipientName) }}
-                                            >
-                                                {getInitials(recipientName)}
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-[14px] font-bold text-on-surface">{recipientName}</p>
-                                                <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1 max-w-[300px]">
-                                                    Hãy gửi lời chào để bắt đầu trao đổi về món đồ này.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        decorated.map((msg) => {
-                                            const isOwn = msg.senderId === currentUserId;
+                                {(() => {
+                                    const otherUserId = String(currentRoom.user1Id) === String(currentUserId) ? currentRoom.user2Id : currentRoom.user1Id;
+                                    const hasAcceptedChat = chatRooms.some(r => 
+                                        r.id !== currentRoom.id && 
+                                        Array.isArray(r.users) &&
+                                        r.users.some(u => String(u) === String(currentUserId)) && 
+                                        r.users.some(u => String(u) === String(otherUserId)) && 
+                                        r.status === "ACCEPTED"
+                                    );
 
+                                    const isPending = currentRoom && currentRoom.postType === "LOST" && currentRoom.status === "PENDING" && !hasAcceptedChat;
+                                    const isRejected = currentRoom && currentRoom.postType === "LOST" && currentRoom.status === "REJECTED";
+                                    const isRequester = currentRoom && String(currentRoom.requestedBy) === String(currentUserId);
+
+                                    if (isPending) {
+                                        if (isRequester) {
                                             return (
-                                                <div key={msg.id} className="w-full flex flex-col">
-                                                    {msg.showDayLabel && msg.dayLabel && (
-                                                        <div className="flex items-center gap-3 my-4">
-                                                            <span className="h-px flex-1 bg-outline-variant/50" />
-                                                            <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
-                                                                {msg.dayLabel}
-                                                            </span>
-                                                            <span className="h-px flex-1 bg-outline-variant/50" />
-                                                        </div>
-                                                    )}
-
-                                                    <div
-                                                        className={`flex items-end gap-2 ${msg.isLastOfGroup ? "mb-2" : "mb-0.5"} ${
-                                                            isOwn ? "flex-row-reverse" : "flex-row"
-                                                        }`}
-                                                    >
-                                                        {!isOwn && (
-                                                            <div className="w-7 shrink-0">
-                                                                {msg.isLastOfGroup && (
-                                                                    <div
-                                                                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                                                        style={{ backgroundImage: getAvatarGradient(recipientName) }}
-                                                                    >
-                                                                        {getInitials(recipientName)}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {msg.type === "post_share" && msg.postMetadata ? (
-                                                            <PostShareCard meta={msg.postMetadata} isOwn={isOwn} />
-                                                        ) : (
-                                                            <div
-                                                                className={`max-w-[70%] px-3.5 py-2 text-[13px] leading-[1.5] break-words text-left shadow-sm ${
-                                                                    isOwn
-                                                                        ? "text-on-primary rounded-2xl " +
-                                                                          (msg.isLastOfGroup ? "rounded-br-md" : "") +
-                                                                          (msg.isFirstOfGroup ? "" : " rounded-tr-md")
-                                                                        : "bg-surface-container-lowest text-on-surface border border-outline-variant/40 rounded-2xl " +
-                                                                          (msg.isLastOfGroup ? "rounded-bl-md" : "") +
-                                                                          (msg.isFirstOfGroup ? "" : " rounded-tl-md")
-                                                                }`}
-                                                                style={
-                                                                    isOwn
-                                                                        ? { backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }
-                                                                        : undefined
-                                                                }
-                                                            >
-                                                                {msg.text}
-                                                            </div>
-                                                        )}
+                                                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                                                    <span className="material-symbols-outlined text-[64px] text-amber-500 animate-pulse">lock_person</span>
+                                                    <div className="space-y-1.5 max-w-sm">
+                                                        <h3 className="text-[17px] font-bold text-on-surface">Yêu cầu trò chuyện đang chờ duyệt</h3>
+                                                        <p className="text-[12.5px] text-on-surface-variant leading-relaxed">
+                                                            Vì lý do an toàn và bảo mật, bạn cần đợi <strong className="text-primary">{recipientName}</strong> (người báo mất) chấp nhận yêu cầu kết nối để bắt đầu trò chuyện.
+                                                        </p>
                                                     </div>
-
-                                                    {msg.isLastOfGroup && formatMessageTime(msg.createdAt) && (
-                                                        <span
-                                                            className={`text-[10px] text-on-surface-variant/70 -mt-1 mb-2.5 ${
-                                                                isOwn ? "self-end" : "self-start ml-[36px]"
-                                                            }`}
-                                                        >
-                                                            {formatMessageTime(msg.createdAt)}
-                                                        </span>
-                                                    )}
                                                 </div>
                                             );
-                                        })
-                                    )}
-                                    <div ref={messagesEndRef} />
-                                </div>
+                                        } else {
+                                            return (
+                                                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-5 bg-surface-container-low/30">
+                                                    <div className="w-16 h-16 rounded-full bg-primary/8 flex items-center justify-center text-primary">
+                                                        <span className="material-symbols-outlined text-[36px]">contact_mail</span>
+                                                    </div>
+                                                    <div className="space-y-2 max-w-md">
+                                                        <h3 className="text-[17px] font-bold text-on-surface">Yêu cầu nhắn tin mới</h3>
+                                                        <p className="text-[13px] text-on-surface-variant leading-relaxed">
+                                                            <strong className="text-on-surface">{recipientName}</strong> muốn nhắn tin trao đổi với bạn về tin báo mất: <br/>
+                                                            <span className="text-primary font-bold">"{currentRoom.postTitle}"</span>.
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex gap-3 w-full max-w-xs">
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await setDoc(doc(db, "chats", currentRoom.id), {
+                                                                        status: "ACCEPTED"
+                                                                    }, { merge: true });
 
-                                {/* Composer */}
-                                <form
-                                    onSubmit={handleSendMessage}
-                                    className="px-3 py-3 bg-surface-container-lowest border-t border-outline-variant/30 flex gap-2 items-center shrink-0"
-                                >
-                                    <input
-                                        type="text"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Nhập tin nhắn..."
-                                        className="flex-1 min-w-0 px-4 py-2.5 rounded-full bg-surface-container-low border border-transparent text-[13.5px] text-on-surface placeholder:text-on-surface-variant/60 transition-all focus:outline-none focus:bg-surface-container-lowest focus:border-primary/60 focus:ring-[3px] focus:ring-primary/10"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={!newMessage.trim()}
-                                        className="w-10 h-10 rounded-full text-on-primary disabled:opacity-35 disabled:cursor-not-allowed enabled:hover:brightness-110 enabled:active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-sm"
-                                        style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
-                                        title="Gửi tin nhắn"
-                                    >
-                                        <Send size={16} className="translate-x-px" />
-                                    </button>
-                                </form>
+                                                                    // Synchronize all other pending rooms between these 2 users
+                                                                    chatRooms.forEach(async (r) => {
+                                                                        if (Array.isArray(r.users) && r.users.some(u => String(u) === String(currentUserId)) && r.users.some(u => String(u) === String(otherUserId)) && r.status === "PENDING") {
+                                                                            await setDoc(doc(db, "chats", r.id), { status: "ACCEPTED" }, { merge: true });
+                                                                        }
+                                                                    });
+                                                                } catch (err) {
+                                                                    console.error("Lỗi khi chấp nhận yêu cầu:", err);
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-[13px] hover:bg-emerald-700 transition-all cursor-pointer shadow-md"
+                                                        >
+                                                            Chấp nhận
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    await setDoc(doc(db, "chats", currentRoom.id), {
+                                                                        status: "REJECTED"
+                                                                    }, { merge: true });
+                                                                } catch (err) {
+                                                                    console.error("Lỗi khi từ chối yêu cầu:", err);
+                                                                }
+                                                            }}
+                                                            className="flex-1 py-2.5 bg-error text-on-error font-bold rounded-xl text-[13px] hover:opacity-90 transition-all cursor-pointer shadow-sm"
+                                                        >
+                                                            Từ chối
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                    }
+
+                                    if (isRejected) {
+                                        return (
+                                            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                                                <span className="material-symbols-outlined text-[64px] text-error">cancel</span>
+                                                <div className="space-y-1.5 max-w-sm">
+                                                    <h3 className="text-[17px] font-bold text-on-surface">Yêu cầu trò chuyện bị từ chối</h3>
+                                                    <p className="text-[12.5px] text-on-surface-variant leading-relaxed">
+                                                        {isRequester
+                                                            ? "Người mất đồ đã từ chối yêu cầu trò chuyện của bạn."
+                                                            : "Bạn đã từ chối yêu cầu trò chuyện từ người dùng này."
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <>
+                                            <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
+                                                {decorated.length === 0 ? (
+                                                    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-8">
+                                                        <div
+                                                            className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[20px] font-bold shadow-lg"
+                                                            style={{ backgroundImage: getAvatarGradient(recipientName) }}
+                                                        >
+                                                            {getInitials(recipientName)}
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <p className="text-[14px] font-bold text-on-surface">{recipientName}</p>
+                                                            <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1 max-w-[300px]">
+                                                                Hãy gửi lời chào để bắt đầu trao đổi về món đồ này.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    decorated.map((msg) => {
+                                                        const isOwn = msg.senderId === currentUserId;
+
+                                                        return (
+                                                            <div key={msg.id} className="w-full flex flex-col">
+                                                                {msg.showDayLabel && msg.dayLabel && (
+                                                                    <div className="flex items-center gap-3 my-4">
+                                                                        <span className="h-px flex-1 bg-outline-variant/50" />
+                                                                        <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
+                                                                            {msg.dayLabel}
+                                                                        </span>
+                                                                        <span className="h-px flex-1 bg-outline-variant/50" />
+                                                                    </div>
+                                                                )}
+
+                                                                <div
+                                                                    className={`flex items-end gap-2 ${msg.isLastOfGroup ? "mb-2" : "mb-0.5"} ${
+                                                                        isOwn ? "flex-row-reverse" : "flex-row"
+                                                                    }`}
+                                                                >
+                                                                    {!isOwn && (
+                                                                        <div className="w-7 shrink-0">
+                                                                            {msg.isLastOfGroup && (
+                                                                                <div
+                                                                                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                                                                    style={{ backgroundImage: getAvatarGradient(recipientName) }}
+                                                                                >
+                                                                                    {getInitials(recipientName)}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+
+                                                                    {msg.type === "post_share" && msg.postMetadata ? (
+                                                                        <PostShareCard meta={msg.postMetadata} isOwn={isOwn} />
+                                                                    ) : (
+                                                                        <div
+                                                                            className={`max-w-[70%] px-3.5 py-2 text-[13px] leading-[1.5] break-words text-left shadow-sm ${
+                                                                                isOwn
+                                                                                    ? "text-on-primary rounded-2xl " +
+                                                                                      (msg.isLastOfGroup ? "rounded-br-md" : "") +
+                                                                                      (msg.isFirstOfGroup ? "" : " rounded-tr-md")
+                                                                                    : "bg-surface-container-lowest text-on-surface border border-outline-variant/40 rounded-2xl " +
+                                                                                      (msg.isLastOfGroup ? "rounded-bl-md" : "") +
+                                                                                      (msg.isFirstOfGroup ? "" : " rounded-tl-md")
+                                                                            }`}
+                                                                            style={
+                                                                                isOwn
+                                                                                    ? { backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }
+                                                                                    : undefined
+                                                                            }
+                                                                        >
+                                                                            {msg.text}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {msg.isLastOfGroup && formatMessageTime(msg.createdAt) && (
+                                                                    <span
+                                                                        className={`text-[10px] text-on-surface-variant/70 -mt-1 mb-2.5 ${
+                                                                            isOwn ? "self-end" : "self-start ml-[36px]"
+                                                                        }`}
+                                                                    >
+                                                                        {formatMessageTime(msg.createdAt)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })
+                                                )}
+                                                <div ref={messagesEndRef} />
+                                            </div>
+
+                                            {/* Composer */}
+                                            <form
+                                                onSubmit={handleSendMessage}
+                                                className="px-3 py-3 bg-surface-container-lowest border-t border-outline-variant/30 flex gap-2 items-center shrink-0"
+                                            >
+                                                <input
+                                                    type="text"
+                                                    value={newMessage}
+                                                    onChange={(e) => setNewMessage(e.target.value)}
+                                                    placeholder="Nhập tin nhắn..."
+                                                    className="flex-1 min-w-0 px-4 py-2.5 rounded-full bg-surface-container-low border border-transparent text-[13.5px] text-on-surface placeholder:text-on-surface-variant/60 transition-all focus:outline-none focus:bg-surface-container-lowest focus:border-primary/60 focus:ring-[3px] focus:ring-primary/10"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={!newMessage.trim()}
+                                                    className="w-10 h-10 rounded-full text-on-primary disabled:opacity-35 disabled:cursor-not-allowed enabled:hover:brightness-110 enabled:active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-sm"
+                                                    style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
+                                                    title="Gửi tin nhắn"
+                                                >
+                                                    <Send size={16} className="translate-x-px" />
+                                                </button>
+                                            </form>
+                                        </>
+                                    );
+                                })()}
                             </>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center p-8 gap-3">
