@@ -40,11 +40,35 @@ export async function updateUser(id, { name, phone }) {
 }
 
 /**
+ * Đổi vai trò người dùng giữa USER và ADMIN.
+ * PATCH /api/v1/admin/users/{id}/role
+ * Body: { newRole: "ADMIN" | "USER" }
+ *
+ * Lưu ý: backend không cho admin tự đổi vai trò của chính mình, và sẽ thu hồi
+ * toàn bộ refresh token của người dùng bị đổi vai trò ngay lập tức.
+ */
+export async function changeUserRole(id, newRole) {
+    return axiosClient.patch(`/api/v1/admin/users/${id}/role`, { newRole })
+}
+
+/**
  * Xoá người dùng.
  * DELETE /api/v1/admin/users/{id}
  */
 export async function deleteUser(id) {
     return axiosClient.delete(`/api/v1/admin/users/${id}`)
+}
+
+// ===== Hệ thống =====
+
+/**
+ * Kiểm tra tình trạng các thành phần hệ thống.
+ * GET /api/v1/system/health
+ * data: { backend, database, clip, ollama, checkedAt }
+ * errors: map { <tên thành phần>: <thông báo lỗi> } — chỉ có khi thành phần gặp sự cố.
+ */
+export async function getSystemHealth() {
+    return axiosClient.get("/api/v1/system/health")
 }
 
 // ===== Quản lý bài đăng =====

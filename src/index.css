@@ -191,16 +191,19 @@
     overflow: hidden;
 }
 
+/* Khi thu gọn: ẩn hẳn chữ, thay bằng một gạch ngang mảnh phân nhóm. */
 .admin-sidebar.collapsed .sidebar-section-label {
-    text-align: center;
     font-size: 0;
-    padding: 12px 0 6px;
+    height: 0;
+    padding: 0;
+    margin: 14px 8px 12px;
+    border-top: 1px solid #e5e8ee;
 }
 
-.admin-sidebar.collapsed .sidebar-section-label::after {
-    content: "···";
-    font-size: 12px;
-    color: #727785;
+/* Nhóm đầu tiên không cần gạch phân cách phía trên. */
+.admin-sidebar.collapsed .sidebar-nav > div:first-child .sidebar-section-label {
+    border-top: none;
+    margin: 4px 0 0;
 }
 
 .sidebar-item {
@@ -755,20 +758,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    font-size: 12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid transparent;
 }
 
 .badge-bool.yes {
-    background: rgba(13, 124, 62, 0.08);
+    background: rgba(13, 124, 62, 0.1);
+    border-color: rgba(13, 124, 62, 0.2);
     color: #0d7c3e;
 }
 
+/* "Không" là trạng thái trung tính (chưa liên kết / chưa đặt mật khẩu),
+   không phải lỗi ⇒ dùng xám thay vì đỏ để bảng bớt rối. */
 .badge-bool.no {
-    background: rgba(186, 26, 26, 0.08);
-    color: #ba1a1a;
+    background: #f1f4fa;
+    border-color: #dfe3e8;
+    color: #a0a5b2;
 }
 
 /* Action buttons in table */
@@ -804,10 +812,26 @@
     border-color: rgba(186, 26, 26, 0.2);
 }
 
+.table-action-btn.warning {
+    color: #9e4300;
+    border-color: rgba(158, 67, 0, 0.2);
+}
+
 .table-action-btn.warning:hover {
     background: rgba(158, 67, 0, 0.08);
     color: #9e4300;
     border-color: rgba(158, 67, 0, 0.2);
+}
+
+.table-action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.table-action-btn:disabled:hover {
+    background: #f1f4fa;
+    color: #727785;
+    border-color: #dfe3e8;
 }
 
 /* Pagination */
@@ -1008,6 +1032,288 @@
 .admin-form-input:disabled {
     background: #f1f4fa;
     cursor: not-allowed;
+}
+
+/* =============================
+   Trang Hệ thống — tình trạng dịch vụ
+   ============================= */
+
+.health-auto-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #414754;
+    cursor: pointer;
+    user-select: none;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid #dfe3e8;
+    background: #ffffff;
+    transition: all 0.2s;
+}
+
+.health-auto-toggle:hover {
+    background: #f1f4fa;
+    border-color: #c1c6d6;
+}
+
+.health-auto-toggle input {
+    width: 15px;
+    height: 15px;
+    accent-color: #005bbf;
+    cursor: pointer;
+    margin: 0;
+}
+
+.health-spin {
+    animation: admin-spin 0.8s linear infinite;
+}
+
+/* ---------- Banner tổng quan ---------- */
+.health-banner {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 26px;
+    border-radius: 16px;
+    border: 1px solid #e5e8ee;
+    background: #ffffff;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.health-banner::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.health-banner.up::before { background: linear-gradient(180deg, #0d7c3e, #43a047); }
+.health-banner.degraded::before { background: linear-gradient(180deg, #9e4300, #ff8f3f); }
+.health-banner.down::before { background: linear-gradient(180deg, #ba1a1a, #e53935); }
+
+.health-banner-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.health-banner.up .health-banner-icon { background: rgba(13, 124, 62, 0.1); color: #0d7c3e; }
+.health-banner.degraded .health-banner-icon { background: rgba(158, 67, 0, 0.1); color: #9e4300; }
+.health-banner.down .health-banner-icon { background: rgba(186, 26, 26, 0.1); color: #ba1a1a; }
+
+.health-banner-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.health-banner-text h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #181c20;
+    letter-spacing: -0.02em;
+    margin: 0 0 4px;
+}
+
+.health-banner-text p {
+    font-size: 13px;
+    color: #727785;
+    margin: 0;
+}
+
+.health-banner-count {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    padding-left: 20px;
+    border-left: 1px solid #ebeef4;
+}
+
+.health-banner-count-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #181c20;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.health-banner-count-label {
+    font-size: 11px;
+    color: #727785;
+    margin-top: 5px;
+}
+
+/* ---------- Lưới thành phần ---------- */
+.health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.health-card {
+    background: #ffffff;
+    border: 1px solid #e5e8ee;
+    border-radius: 16px;
+    padding: 20px;
+    transition: all 0.25s;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.health-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 91, 191, 0.1);
+}
+
+.health-card.down { border-color: rgba(186, 26, 26, 0.25); }
+.health-card.degraded { border-color: rgba(158, 67, 0, 0.25); }
+
+.health-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.health-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(0, 91, 191, 0.08);
+    color: #005bbf;
+}
+
+.health-card.down .health-card-icon { background: rgba(186, 26, 26, 0.08); color: #ba1a1a; }
+.health-card.degraded .health-card-icon { background: rgba(158, 67, 0, 0.08); color: #9e4300; }
+.health-card.unknown .health-card-icon { background: #f1f4fa; color: #727785; }
+
+.health-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #181c20;
+    margin: 0 0 3px;
+    letter-spacing: -0.01em;
+}
+
+.health-card-desc {
+    font-size: 12px;
+    color: #727785;
+    margin: 0 0 14px;
+    line-height: 1.5;
+}
+
+/* Huy hiệu trạng thái */
+.health-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    border: 1px solid transparent;
+}
+
+.health-pill.up {
+    background: rgba(13, 124, 62, 0.1);
+    border-color: rgba(13, 124, 62, 0.2);
+    color: #0d7c3e;
+}
+
+.health-pill.down {
+    background: rgba(186, 26, 26, 0.1);
+    border-color: rgba(186, 26, 26, 0.2);
+    color: #ba1a1a;
+}
+
+.health-pill.degraded {
+    background: rgba(158, 67, 0, 0.1);
+    border-color: rgba(158, 67, 0, 0.2);
+    color: #9e4300;
+}
+
+.health-pill.unknown {
+    background: #f1f4fa;
+    border-color: #dfe3e8;
+    color: #727785;
+}
+
+/* Giá trị thô backend trả về */
+.health-card-raw {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: #f7f9ff;
+    border: 1px solid #ebeef4;
+}
+
+.health-card-raw-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #727785;
+}
+
+.health-card-raw code {
+    font-size: 12px;
+    font-weight: 600;
+    color: #181c20;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break: break-all;
+    text-align: right;
+}
+
+.health-card-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    margin-top: 12px;
+    padding: 9px 11px;
+    border-radius: 10px;
+    background: rgba(186, 26, 26, 0.06);
+    border: 1px solid rgba(186, 26, 26, 0.15);
+    color: #ba1a1a;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+
+.health-card-error svg {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+@media (max-width: 640px) {
+    .health-banner {
+        flex-wrap: wrap;
+    }
+
+    .health-banner-count {
+        border-left: none;
+        padding-left: 0;
+        align-items: flex-start;
+    }
 }
 
 /* Placeholder pages */
@@ -1240,6 +1546,13 @@
     font-weight: 600;
     color: #181c20;
     word-break: break-all;
+}
+
+/* Giá trị kèm huy hiệu icon — căn giữa theo chiều dọc thay vì dính chữ. */
+.user-detail-value-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .user-detail-value a {

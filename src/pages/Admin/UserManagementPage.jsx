@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react"
-import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle } from "lucide-react"
+import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle, ShieldCheck, ShieldOff, Check } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
-import { getUserById, updateUser, deleteUser } from "../../services/adminService.js"
+import { useAuth } from "../../hooks/useAuth.js"
+import { getUserById, updateUser, deleteUser, changeUserRole } from "../../services/adminService.js"
 
 // Palette cho avatar
 const AVATAR_COLORS = [
@@ -11,6 +12,15 @@ const AVATAR_COLORS = [
 
 function getAvatarColor(id) {
     return AVATAR_COLORS[(id ?? 0) % AVATAR_COLORS.length]
+}
+
+// Huy hiệu có/không dùng chung cho cột Google và Mật khẩu.
+function BoolBadge({ value, title }) {
+    return (
+        <span className={`badge-bool ${value ? "yes" : "no"}`} title={title}>
+            {value ? <Check size={13} strokeWidth={3.5} /> : <X size={13} strokeWidth={3.5} />}
+        </span>
+    )
 }
 
 export default function UserManagementPage() {
@@ -24,6 +34,10 @@ export default function UserManagementPage() {
         fetchUsers,
     } = useAdminStore()
 
+    const { user: currentUser } = useAuth()
+    // Backend chặn admin tự đổi vai trò của chính mình ⇒ khoá nút ở phía client luôn.
+    const currentUserId = currentUser ? String(currentUser.userId ?? currentUser.id) : null
+
     const [searchInput, setSearchInput] = useState(usersSearch)
 
     // Modal state
@@ -36,6 +50,11 @@ export default function UserManagementPage() {
     const [editForm, setEditForm] = useState({ name: "", phone: "" })
     const [editSaving, setEditSaving] = useState(false)
     const [editError, setEditError] = useState(null)
+
+    // Đổi vai trò người dùng
+    const [roleTarget, setRoleTarget] = useState(null)
+    const [roleSaving, setRoleSaving] = useState(false)
+    const [roleError, setRoleError] = useState(null)
 
     // Xoá người dùng
     const [deleteTarget, setDeleteTarget] = useState(null)
@@ -117,6 +136,35 @@ export default function UserManagementPage() {
             setEditError(err.message || "Không thể cập nhật người dùng")
         } finally {
             setEditSaving(false)
+        }
+    }
+
+    // Mở modal xác nhận đổi vai trò
+    const openRoleChange = (u) => {
+        setRoleError(null)
+        setRoleTarget(u)
+    }
+
+    const closeRoleModal = () => {
+        if (roleSaving) return
+        setRoleTarget(null)
+        setRoleError(null)
+    }
+
+    // Xác nhận & thực hiện đổi vai trò
+    const handleConfirmRoleChange = async () => {
+        if (!roleTarget) return
+        const newRole = roleTarget.type === "ADMIN" ? "USER" : "ADMIN"
+        setRoleSaving(true)
+        setRoleError(null)
+        try {
+            await changeUserRole(roleTarget.id, newRole)
+            setRoleTarget(null)
+            await fetchUsers({ page: pageNumber })
+        } catch (err) {
+            setRoleError(err.message || "Không thể đổi vai trò người dùng")
+        } finally {
+            setRoleSaving(false)
         }
     }
 
@@ -262,22 +310,16 @@ export default function UserManagementPage() {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        className={`badge-bool ${
-                                                            u.googleAccount ? "yes" : "no"
-                                                        }`}
-                                                    >
-                                                        {u.googleAccount ? "✓" : "✗"}
-                                                    </span>
+                                                    <BoolBadge
+                                                        value={u.googleAccount}
+                                                        title={u.googleAccount ? "Đã liên kết Google" : "Chưa liên kết Google"}
+                                                    />
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        className={`badge-bool ${
-                                                            u.hasPassword ? "yes" : "no"
-                                                        }`}
-                                                    >
-                                                        {u.hasPassword ? "✓" : "✗"}
-                                                    </span>
+                                                    <BoolBadge
+                                                        value={u.hasPassword}
+                                                        title={u.hasPassword ? "Đã thiết lập mật khẩu" : "Chưa thiết lập mật khẩu"}
+                                                    />
                                                 </td>
                                                 <td>
                                                     {u.createdAt
@@ -299,6 +341,26 @@ export default function UserManagementPage() {
                                                             onClick={() => openEdit(u)}
                                                         >
                                                             <Pencil size={14} />
+                                                        </button>
+                                                        <button
+                                                            className={`table-action-btn${
+                                                                u.type === "ADMIN" ? " warning" : ""
+                                                            }`}
+                                                            title={
+                                                                String(u.id) === currentUserId
+                                                                    ? "Không thể tự đổi vai trò của chính mình"
+                                                                    : u.type === "ADMIN"
+                                                                    ? "Hạ quyền xuống Người dùng"
+                                                                    : "Nâng quyền lên Admin"
+                                                            }
+                                                            disabled={String(u.id) === currentUserId}
+                                                            onClick={() => openRoleChange(u)}
+                                                        >
+                                                            {u.type === "ADMIN" ? (
+                                                                <ShieldOff size={14} />
+                                                            ) : (
+                                                                <ShieldCheck size={14} />
+                                                            )}
                                                         </button>
                                                         <button
                                                             className="table-action-btn danger"
@@ -461,21 +523,15 @@ export default function UserManagementPage() {
                                     </div>
                                     <div className="user-detail-item">
                                         <div className="user-detail-label">Tài khoản Google</div>
-                                        <div className="user-detail-value">
-                                            <span className={`badge-bool ${detailUser.googleAccount ? "yes" : "no"}`}>
-                                                {detailUser.googleAccount ? "✓" : "✗"}
-                                            </span>
-                                            {" "}
+                                        <div className="user-detail-value user-detail-value-inline">
+                                            <BoolBadge value={detailUser.googleAccount} />
                                             {detailUser.googleAccount ? "Đã liên kết" : "Chưa liên kết"}
                                         </div>
                                     </div>
                                     <div className="user-detail-item">
                                         <div className="user-detail-label">Mật khẩu</div>
-                                        <div className="user-detail-value">
-                                            <span className={`badge-bool ${detailUser.hasPassword ? "yes" : "no"}`}>
-                                                {detailUser.hasPassword ? "✓" : "✗"}
-                                            </span>
-                                            {" "}
+                                        <div className="user-detail-value user-detail-value-inline">
+                                            <BoolBadge value={detailUser.hasPassword} />
                                             {detailUser.hasPassword ? "Đã thiết lập" : "Chưa thiết lập"}
                                         </div>
                                     </div>
@@ -584,6 +640,130 @@ export default function UserManagementPage() {
                                     disabled={editSaving}
                                 >
                                     {editSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== Modal xác nhận đổi vai trò ===== */}
+            {roleTarget && (
+                <div className="admin-modal-overlay" onClick={closeRoleModal}>
+                    <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="admin-modal-header">
+                            <h2>
+                                {roleTarget.type === "ADMIN" ? (
+                                    <ShieldOff size={18} color="#9e4300" />
+                                ) : (
+                                    <ShieldCheck size={18} color="#005bbf" />
+                                )}
+                                {roleTarget.type === "ADMIN" ? "Hạ quyền quản trị" : "Nâng quyền quản trị"}
+                            </h2>
+                            <button
+                                className="admin-modal-close"
+                                onClick={closeRoleModal}
+                                disabled={roleSaving}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="admin-modal-body">
+                            {/* Trước → sau */}
+                            <div className="user-detail-profile">
+                                <div
+                                    className="user-detail-avatar"
+                                    style={{ background: getAvatarColor(roleTarget.id) }}
+                                >
+                                    {(roleTarget.name || "?").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="user-detail-profile-info">
+                                    <h3>{roleTarget.name}</h3>
+                                    <p>{roleTarget.mail}</p>
+                                </div>
+                            </div>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 14,
+                                    marginBottom: 20,
+                                }}
+                            >
+                                <span className={`badge-type ${roleTarget.type === "ADMIN" ? "admin" : "user"}`}>
+                                    {roleTarget.type === "ADMIN" ? "Admin" : "Người dùng"}
+                                </span>
+                                <ChevronRight size={18} color="#727785" />
+                                <span className={`badge-type ${roleTarget.type === "ADMIN" ? "user" : "admin"}`}>
+                                    {roleTarget.type === "ADMIN" ? "Người dùng" : "Admin"}
+                                </span>
+                            </div>
+
+                            <p style={{ margin: "0 0 12px", color: "#444", fontSize: 14, lineHeight: 1.6 }}>
+                                {roleTarget.type === "ADMIN" ? (
+                                    <>
+                                        Bạn có chắc muốn <strong>thu hồi quyền quản trị</strong> của{" "}
+                                        <strong>{roleTarget.name}</strong>? Người này sẽ mất toàn bộ quyền
+                                        truy cập trang quản trị.
+                                    </>
+                                ) : (
+                                    <>
+                                        Bạn có chắc muốn <strong>cấp quyền quản trị</strong> cho{" "}
+                                        <strong>{roleTarget.name}</strong>? Người này sẽ có toàn quyền quản lý
+                                        người dùng và bài đăng.
+                                    </>
+                                )}
+                            </p>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: 8,
+                                    padding: "12px 14px",
+                                    borderRadius: 12,
+                                    background: "rgba(158, 67, 0, 0.06)",
+                                    border: "1px solid rgba(158, 67, 0, 0.15)",
+                                    color: "#9e4300",
+                                    fontSize: 12.5,
+                                    lineHeight: 1.6,
+                                    marginBottom: 16,
+                                }}
+                            >
+                                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+                                <span>
+                                    Toàn bộ phiên đăng nhập của người dùng này sẽ bị thu hồi ngay lập tức —
+                                    họ cần đăng nhập lại.
+                                </span>
+                            </div>
+
+                            {roleError && (
+                                <div className="admin-error" style={{ marginBottom: 12 }}>
+                                    ⚠️ {roleError}
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                                <button
+                                    className="filter-btn"
+                                    onClick={closeRoleModal}
+                                    disabled={roleSaving}
+                                >
+                                    Huỷ
+                                </button>
+                                <button
+                                    className="filter-btn primary"
+                                    onClick={handleConfirmRoleChange}
+                                    disabled={roleSaving}
+                                >
+                                    {roleSaving
+                                        ? "Đang cập nhật..."
+                                        : roleTarget.type === "ADMIN"
+                                        ? "Hạ quyền"
+                                        : "Nâng quyền"}
                                 </button>
                             </div>
                         </div>
