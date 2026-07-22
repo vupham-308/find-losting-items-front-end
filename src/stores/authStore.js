@@ -32,22 +32,9 @@ export const useAuthStore = create(
             googleLogin: async (payload) => {
                 const res = await authService.googleLogin(payload)
                 const user = res?.data ?? null
-                // Đặt token trước để getMe() bên dưới đính kèm được Bearer token.
-                set({ user, token: user?.accessToken ?? null })
-
-                // Xác định tài khoản đã có mật khẩu cục bộ chưa.
-                // Ưu tiên field từ response; nếu backend không trả thì hỏi getMe().
-                let hasPassword = user?.hasPassword
-                if (hasPassword === undefined || hasPassword === null) {
-                    try {
-                        const me = await authService.getMe()
-                        hasPassword = me?.data?.hasPassword
-                    } catch {
-                        // Không xác định được → coi như đã có để tránh khoá nhầm người dùng.
-                        hasPassword = true
-                    }
-                }
-                set({ hasPassword: !!hasPassword })
+                // Đăng nhập Google không bắt buộc thiết lập mật khẩu cục bộ nữa.
+                // Người dùng có thể tuỳ chọn thiết lập trong trang Hồ sơ > Bảo mật.
+                set({ user, token: user?.accessToken ?? null, hasPassword: true })
                 return user
             },
 

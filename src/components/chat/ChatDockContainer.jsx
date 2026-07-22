@@ -9,9 +9,13 @@ export default function ChatDockContainer() {
     if (!user || activeChats.length === 0) return null;
 
     return (
-        <div className="fixed bottom-0 right-4 md:right-8 z-[999] flex flex-row-reverse items-end gap-3 pointer-events-none">
+        <div className="fixed bottom-0 right-2 md:right-6 z-[999] flex flex-row-reverse items-end gap-2.5 pointer-events-none max-w-[calc(100vw-1rem)]">
             {activeChats.map((chat) => (
-                <div key={chat.roomId} className="pointer-events-auto">
+                <div
+                    key={chat.roomId}
+                    className="pointer-events-auto animate-in slide-in-from-bottom-4 fade-in duration-300"
+                >
+
                     <DockedChatBox chat={chat} currentUser={user} />
                 </div>
             ))}

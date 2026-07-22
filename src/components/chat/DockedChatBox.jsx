@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { collection, addDoc, serverTimestamp, onSnapshot, query, setDoc, doc } from "firebase/firestore";
 import { db } from "../../firebase";
-import { X, Minus, Plus, Send, MessageSquare } from "lucide-react";
+import { X, Minus, Send, AlertCircle, MessageSquareText } from "lucide-react";
 import { useChatStore } from "../../stores/chatStore.js";
+import {
+    decorateMessages,
+    formatMessageTime,
+    getInitials,
+    getAvatarGradient,
+} from "./chatUtils.js";
 
 export default function DockedChatBox({ chat, currentUser }) {
     const { roomId, postTitle, recipientId, recipientName, isMinimized } = chat;
@@ -13,7 +19,13 @@ export default function DockedChatBox({ chat, currentUser }) {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [pendingPost, setPendingPost] = useState(chat.pendingPostShare || null);
+    const [chatError, setChatError] = useState("");
+    const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
+    const inputRef = useRef(null);
+
+    const avatarLabel = getInitials(recipientName);
+    const avatarStyle = { backgroundImage: getAvatarGradient(recipientName) };
 
     // Sync pendingPostShare from props (e.g. when reopening chat with different post preview)
     useEffect(() => {
@@ -40,17 +52,30 @@ export default function DockedChatBox({ chat, currentUser }) {
                 return timeA - timeB;
             });
             setMessages(msgs);
-            
+            setChatError("");
+
             // Auto scroll to bottom
             setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
             }, 100);
         }, (err) => {
             console.error("Lỗi khi tải tin nhắn cho docked chat:", err);
+            setChatError(
+                err.code === "permission-denied"
+                    ? "Không có quyền truy cập Firestore. Kiểm tra lại Security Rules của collection \"chats\"."
+                    : `Không kết nối được Firestore (${err.code || "unknown"}).`
+            );
         });
 
         return () => unsubscribe();
     }, [roomId]);
+
+    // Focus input when the box is expanded
+    useEffect(() => {
+        if (!isMinimized) {
+            inputRef.current?.focus();
+        }
+    }, [isMinimized]);
 
     // Clear unread count for current user when chat box is active or new message arrives
     useEffect(() => {
@@ -66,10 +91,11 @@ export default function DockedChatBox({ chat, currentUser }) {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !roomId) return;
+        if (!newMessage.trim() || !roomId || sending) return;
 
         const textToSend = newMessage.trim();
         setNewMessage("");
+        setSending(true);
 
         try {
             // Add message
@@ -90,12 +116,16 @@ export default function DockedChatBox({ chat, currentUser }) {
             }, { merge: true });
         } catch (err) {
             console.error("Lỗi khi gửi tin nhắn:", err);
+            setChatError("Gửi tin nhắn thất bại. Vui lòng thử lại.");
+            setNewMessage(textToSend);
+        } finally {
+            setSending(false);
         }
     };
 
     const handleSendPostShare = async () => {
         if (!pendingPost || !roomId) return;
-        
+
         try {
             await addDoc(collection(db, "chats", roomId, "messages"), {
                 senderId: currentUserId,
@@ -123,102 +153,167 @@ export default function DockedChatBox({ chat, currentUser }) {
             setPendingPost(null);
         } catch (err) {
             console.error("Lỗi khi gửi chia sẻ bài viết:", err);
+            setChatError("Không gửi được bài viết. Vui lòng thử lại.");
         }
     };
 
+    const decorated = decorateMessages(messages);
+
     return (
-        <div className={`w-72 md:w-80 bg-white shadow-2xl rounded-t-2xl border border-slate-300 flex flex-col overflow-hidden transition-all duration-200 z-[999] ${
-            isMinimized ? "h-12" : "h-[390px]"
-        }`}>
-            {/* Header */}
-            <div 
+        <div
+            className={`w-[340px] max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-t-2xl border border-outline-variant/50 border-b-0 flex flex-col overflow-hidden transition-[height] duration-300 ease-out ${
+                isMinimized ? "h-14" : "h-[470px]"
+            }`}
+            style={{ boxShadow: "0 -4px 32px rgba(0, 32, 74, 0.16), 0 2px 8px rgba(0, 32, 74, 0.08)" }}
+        >
+            {/* ---------- Header ---------- */}
+            <div
                 onClick={() => toggleMinimize(roomId)}
-                className="px-3.5 py-3 bg-primary text-on-primary flex justify-between items-center cursor-pointer shrink-0"
+                className="px-3 h-14 flex justify-between items-center cursor-pointer shrink-0 text-on-primary select-none"
+                style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
             >
-                <div className="flex items-center gap-2 min-w-0 text-left">
-                    <MessageSquare size={16} className="shrink-0" />
+                <div className="flex items-center gap-2.5 min-w-0 text-left">
+                    {/* Avatar with presence ring */}
+                    <div className="relative shrink-0">
+                        <div
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white ring-2 ring-white/30"
+                            style={avatarStyle}
+                        >
+                            {avatarLabel}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#0d63cc]" />
+                    </div>
+
                     <div className="min-w-0">
-                        <h4 className="font-bold text-[13px] truncate">{recipientName}</h4>
-                        {!isMinimized && (
-                            <p className="text-[10px] opacity-80 truncate">Đang xem: {postTitle}</p>
+                        <h4 className="font-bold text-[13.5px] truncate leading-tight tracking-[-0.01em]">
+                            {recipientName}
+                        </h4>
+                        {!isMinimized && postTitle && (
+                            <p className="text-[10.5px] text-white/75 truncate leading-tight mt-0.5">
+                                {postTitle}
+                            </p>
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+
+                <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                         onClick={() => toggleMinimize(roomId)}
-                        className="p-1 hover:bg-white/10 rounded transition-colors text-white"
-                        title={isMinimized ? "Phóng to" : "Thu nhỏ"}
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 active:bg-white/30 transition-colors text-white cursor-pointer"
+                        title={isMinimized ? "Mở rộng" : "Thu nhỏ"}
                     >
-                        {isMinimized ? <Plus size={14} /> : <Minus size={14} />}
+                        {isMinimized
+                            ? <MessageSquareText size={15} />
+                            : <Minus size={16} />}
                     </button>
                     <button
                         onClick={() => closeChat(roomId)}
-                        className="p-1 hover:bg-white/10 rounded transition-colors text-white"
-                        title="Đóng chat"
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 active:bg-white/30 transition-colors text-white cursor-pointer"
+                        title="Đóng"
                     >
-                        <X size={14} />
+                        <X size={16} />
                     </button>
                 </div>
             </div>
 
-            {/* Content (only when not minimized) */}
+            {/* ---------- Body (chỉ khi mở rộng) ---------- */}
             {!isMinimized && (
                 <>
+                    {chatError && (
+                        <div className="px-3 py-2 bg-error-container text-on-error-container text-[10.5px] leading-snug text-left border-b border-error/20 shrink-0 flex items-start gap-1.5">
+                            <AlertCircle size={13} className="shrink-0 mt-px" />
+                            <span>{chatError}</span>
+                        </div>
+                    )}
+
                     {/* Message list */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-surface-container-low/20 flex flex-col">
-                        {messages.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-outline p-4">
-                                <p className="text-[11px] text-center">Gửi tin nhắn đầu tiên để bắt đầu trao đổi!</p>
+                    <div className="flex-1 overflow-y-auto px-3 py-3 flex flex-col bg-surface-container-low/40">
+                        {decorated.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center gap-2.5 px-6">
+                                <div
+                                    className="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg"
+                                    style={avatarStyle}
+                                >
+                                    <span className="text-[17px] font-bold">{avatarLabel}</span>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-[12.5px] font-bold text-on-surface">{recipientName}</p>
+                                    <p className="text-[11px] text-on-surface-variant leading-relaxed mt-1">
+                                        Hãy gửi lời chào để bắt đầu trao đổi về món đồ này.
+                                    </p>
+                                </div>
                             </div>
                         ) : (
-                            messages.map((msg) => {
+                            decorated.map((msg) => {
                                 const isOwn = msg.senderId === currentUserId;
-                                
-                                if (msg.type === "post_share" && msg.postMetadata) {
-                                    const meta = msg.postMetadata;
-                                    return (
-                                        <div
-                                            key={msg.id}
-                                            onClick={() => {
-                                                window.location.href = `/posts/${meta.postId}`;
-                                            }}
-                                            className={`max-w-[85%] p-2.5 rounded-2xl border text-left cursor-pointer hover:shadow-md transition-all flex gap-2.5 items-center shrink-0 ${
-                                                isOwn
-                                                    ? "bg-blue-50 text-slate-800 border-blue-250 self-end rounded-tr-none"
-                                                    : "bg-white text-slate-800 border-slate-200 self-start rounded-tl-none"
-                                            }`}
-                                            title="Click để xem chi tiết bài đăng"
-                                        >
-                                            <img
-                                                src={meta.imageUrl || "/placeholder-image.png"}
-                                                alt={meta.title}
-                                                className="w-12 h-12 object-cover rounded-lg bg-slate-100 shrink-0"
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                                <span className="inline-block px-1.5 py-0.5 text-[8px] font-bold rounded bg-green-100 text-green-700 uppercase tracking-wide mb-0.5">
-                                                    {meta.type || "FOUND"}
-                                                </span>
-                                                <h5 className="font-bold text-[11.5px] text-slate-800 truncate">{meta.title}</h5>
-                                                <p className="text-[9.5px] text-slate-500 truncate flex items-center gap-0.5">
-                                                    <span className="material-symbols-outlined text-[10px]">location_on</span>
-                                                    {meta.address || "Không rõ địa điểm"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                }
 
                                 return (
-                                    <div
-                                        key={msg.id}
-                                        className={`max-w-[80%] px-3 py-1.5 rounded-2xl text-[12px] leading-relaxed break-words text-left ${
-                                            isOwn
-                                                ? "bg-primary text-on-primary self-end rounded-tr-none"
-                                                : "bg-surface-container-high text-on-surface self-start rounded-tl-none border border-outline-variant/10"
-                                        }`}
-                                    >
-                                        {msg.text}
+                                    <div key={msg.id} className="w-full flex flex-col">
+                                        {/* Day separator */}
+                                        {msg.showDayLabel && msg.dayLabel && (
+                                            <div className="flex items-center gap-2 my-3 px-1">
+                                                <span className="h-px flex-1 bg-outline-variant/50" />
+                                                <span className="text-[9.5px] font-semibold text-on-surface-variant uppercase tracking-wider">
+                                                    {msg.dayLabel}
+                                                </span>
+                                                <span className="h-px flex-1 bg-outline-variant/50" />
+                                            </div>
+                                        )}
+
+                                        <div
+                                            className={`flex items-end gap-1.5 ${msg.isLastOfGroup ? "mb-2" : "mb-0.5"} ${
+                                                isOwn ? "flex-row-reverse" : "flex-row"
+                                            }`}
+                                        >
+                                            {/* Avatar gutter — chỉ hiện ở bong bóng cuối cụm của đối phương */}
+                                            {!isOwn && (
+                                                <div className="w-6 shrink-0">
+                                                    {msg.isLastOfGroup && (
+                                                        <div
+                                                            className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                                                            style={avatarStyle}
+                                                        >
+                                                            {avatarLabel}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {msg.type === "post_share" && msg.postMetadata ? (
+                                                <PostShareCard meta={msg.postMetadata} isOwn={isOwn} />
+                                            ) : (
+                                                <div
+                                                    title={formatMessageTime(msg.createdAt)}
+                                                    className={`group max-w-[78%] px-3 py-[7px] text-[12.5px] leading-[1.45] break-words text-left shadow-sm ${
+                                                        isOwn
+                                                            ? "text-on-primary rounded-2xl " +
+                                                              (msg.isLastOfGroup ? "rounded-br-md" : "") +
+                                                              (msg.isFirstOfGroup ? "" : " rounded-tr-md")
+                                                            : "bg-surface-container-lowest text-on-surface border border-outline-variant/40 rounded-2xl " +
+                                                              (msg.isLastOfGroup ? "rounded-bl-md" : "") +
+                                                              (msg.isFirstOfGroup ? "" : " rounded-tl-md")
+                                                    }`}
+                                                    style={
+                                                        isOwn
+                                                            ? { backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }
+                                                            : undefined
+                                                    }
+                                                >
+                                                    {msg.text}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Timestamp — chỉ dưới bong bóng cuối cụm */}
+                                        {msg.isLastOfGroup && formatMessageTime(msg.createdAt) && (
+                                            <span
+                                                className={`text-[9.5px] text-on-surface-variant/70 -mt-1.5 mb-2 px-1 ${
+                                                    isOwn ? "self-end" : "self-start ml-[30px]"
+                                                }`}
+                                            >
+                                                {formatMessageTime(msg.createdAt)}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })
@@ -226,63 +321,134 @@ export default function DockedChatBox({ chat, currentUser }) {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Pending Post Share Draft Preview */}
+                    {/* ---------- Bản nháp chia sẻ bài viết ---------- */}
                     {pendingPost && (
-                        <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex flex-col gap-2 shrink-0 relative animate-in slide-in-from-bottom duration-150">
-                            {/* Dismiss button */}
-                            <button
-                                type="button"
-                                onClick={() => setPendingPost(null)}
-                                className="absolute right-2 top-2 text-slate-400 hover:text-slate-600 w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-200 cursor-pointer"
-                                title="Bỏ qua"
-                            >
-                                <X size={12} />
-                            </button>
-
-                            <div className="flex gap-2.5 items-center pr-5 text-left">
-                                <img
-                                    src={pendingPost.imageUrl || "/placeholder-image.png"}
-                                    alt={pendingPost.title}
-                                    className="w-10 h-10 object-cover rounded bg-slate-200 shrink-0"
-                                />
-                                <div className="min-w-0 flex-1">
-                                    <span className="inline-block px-1.5 py-0.5 text-[8px] font-bold rounded bg-green-100 text-green-700 uppercase tracking-wide mb-0.5">
-                                        {pendingPost.type || "FOUND"}
-                                    </span>
-                                    <h5 className="font-bold text-[11.5px] text-slate-800 truncate">{pendingPost.title}</h5>
-                                    <p className="text-[9.5px] text-slate-500 truncate">{pendingPost.address}</p>
-                                </div>
+                        <div className="mx-2.5 mb-1.5 rounded-xl bg-surface-container-low border border-outline-variant/50 shrink-0 relative overflow-hidden">
+                            <div className="px-2.5 pt-2 pb-1 flex items-center justify-between">
+                                <span className="text-[9px] font-bold text-primary uppercase tracking-wider">
+                                    Đính kèm bài viết
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingPost(null)}
+                                    className="w-5 h-5 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
+                                    title="Bỏ đính kèm"
+                                >
+                                    <X size={11} />
+                                </button>
                             </div>
-                            
-                            <button
-                                type="button"
-                                onClick={handleSendPostShare}
-                                className="w-full py-1.5 px-3 bg-primary text-on-primary font-bold text-[11px] rounded-lg hover:opacity-90 transition-all text-center cursor-pointer"
-                            >
-                                Gửi bài viết
-                            </button>
+
+                            <div className="px-2.5 pb-2 flex gap-2.5 items-center text-left">
+                                <PostThumb src={pendingPost.imageUrl} alt={pendingPost.title} size="w-11 h-11" />
+                                <div className="min-w-0 flex-1">
+                                    <TypeBadge type={pendingPost.type} />
+                                    <h5 className="font-bold text-[11.5px] text-on-surface truncate leading-tight mt-0.5">
+                                        {pendingPost.title}
+                                    </h5>
+                                    <p className="text-[9.5px] text-on-surface-variant truncate">{pendingPost.address}</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleSendPostShare}
+                                    className="shrink-0 px-3 py-1.5 text-on-primary font-bold text-[10.5px] rounded-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm"
+                                    style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
+                                >
+                                    Gửi
+                                </button>
+                            </div>
                         </div>
                     )}
 
-                    {/* Send Input Form */}
-                    <form onSubmit={handleSendMessage} className="p-2 bg-surface-container border-t border-outline-variant/20 flex gap-1.5 shrink-0">
+                    {/* ---------- Ô soạn tin ---------- */}
+                    <form
+                        onSubmit={handleSendMessage}
+                        className="px-2.5 py-2.5 bg-surface-container-lowest border-t border-outline-variant/40 flex gap-2 items-center shrink-0"
+                    >
                         <input
+                            ref={inputRef}
                             type="text"
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
                             placeholder="Nhập tin nhắn..."
-                            className="flex-1 px-3 py-1.5 rounded-full border border-outline-variant bg-surface text-[12px] focus:outline-none focus:border-primary outline-none"
+                            className="flex-1 min-w-0 px-3.5 py-2 rounded-full bg-surface-container-low border border-transparent text-[12.5px] text-on-surface placeholder:text-on-surface-variant/60 transition-all focus:outline-none focus:bg-surface-container-lowest focus:border-primary/60 focus:ring-[3px] focus:ring-primary/10"
                         />
                         <button
                             type="submit"
-                            disabled={!newMessage.trim()}
-                            className="w-8 h-8 rounded-full bg-primary text-on-primary hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
+                            disabled={!newMessage.trim() || sending}
+                            className="w-9 h-9 rounded-full text-on-primary disabled:opacity-35 disabled:cursor-not-allowed enabled:hover:brightness-110 enabled:active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-sm"
+                            style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
+                            title="Gửi tin nhắn"
                         >
-                            <Send size={12} />
+                            <Send size={14} className="translate-x-px" />
                         </button>
                     </form>
                 </>
             )}
+        </div>
+    );
+}
+
+/* ============ Thành phần phụ ============ */
+
+function TypeBadge({ type }) {
+    const isLost = type === "LOST";
+    return (
+        <span
+            className={`inline-block px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wide ${
+                isLost
+                    ? "bg-error-container text-on-error-container"
+                    : "bg-emerald-100 text-emerald-700"
+            }`}
+        >
+            {isLost ? "Mất đồ" : "Nhặt được"}
+        </span>
+    );
+}
+
+function PostThumb({ src, alt, size = "w-12 h-12" }) {
+    if (!src) {
+        return (
+            <div className={`${size} rounded-lg bg-surface-container-high flex items-center justify-center shrink-0 text-outline`}>
+                <span className="material-symbols-outlined text-[18px]">image</span>
+            </div>
+        );
+    }
+    return (
+        <img
+            src={src}
+            alt={alt}
+            className={`${size} object-cover rounded-lg bg-surface-container-high shrink-0`}
+        />
+    );
+}
+
+function PostShareCard({ meta, isOwn }) {
+    return (
+        <div
+            onClick={() => { window.location.href = `/posts/${meta.postId}`; }}
+            title="Xem chi tiết bài đăng"
+            className={`max-w-[82%] w-[210px] rounded-2xl overflow-hidden border text-left cursor-pointer transition-all hover:-translate-y-0.5 shrink-0 bg-surface-container-lowest shadow-sm hover:shadow-md ${
+                isOwn
+                    ? "border-primary/35 rounded-br-md"
+                    : "border-outline-variant/50 rounded-bl-md"
+            }`}
+        >
+            <div className="flex gap-2.5 items-center p-2.5">
+                <PostThumb src={meta.imageUrl} alt={meta.title} />
+                <div className="min-w-0 flex-1">
+                    <TypeBadge type={meta.type} />
+                    <h5 className="font-bold text-[11.5px] text-on-surface truncate leading-tight mt-0.5">
+                        {meta.title}
+                    </h5>
+                    <p className="text-[9.5px] text-on-surface-variant truncate flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-[11px]">location_on</span>
+                        {meta.address || "Không rõ địa điểm"}
+                    </p>
+                </div>
+            </div>
+            <div className="px-2.5 py-1.5 bg-primary/5 border-t border-outline-variant/30 text-[9.5px] font-bold text-primary text-center">
+                Xem chi tiết bài đăng
+            </div>
         </div>
     );
 }

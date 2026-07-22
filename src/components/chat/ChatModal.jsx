@@ -1,17 +1,39 @@
 import { useState, useEffect, useRef } from "react";
 import { collection, doc, query, where, onSnapshot, addDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../../firebase";
-import { X, Send, MessageSquare, ChevronLeft } from "lucide-react";
+import { X, Send, MessagesSquare, ChevronLeft, Search, AlertCircle } from "lucide-react";
+import {
+    decorateMessages,
+    formatMessageTime,
+    formatRelativeTime,
+    getInitials,
+    getAvatarGradient,
+} from "./chatUtils.js";
 
 export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, defaultPostTitle, defaultPostImage, defaultRecipientName, currentUser }) {
     const currentUserId = currentUser ? String(currentUser.userId || currentUser.id) : "";
     const currentUserName = currentUser ? (currentUser.full_name || currentUser.name || "Người dùng") : "Người dùng";
 
+    // roomId của hội thoại được mở sẵn (nếu modal được gọi kèm bài viết + người nhận).
+    // Suy ra ngay khi render để không phải setState trong effect.
+    // Công thức: postId_minUserId_maxUserId
+    const defaultRoomId = (() => {
+        if (!currentUserId || !defaultPostId || !defaultRecipientId) return null;
+        const uid1 = String(currentUserId);
+        const uid2 = String(defaultRecipientId);
+        if (uid1 === uid2) return null; // Không thể tự nhắn cho chính mình
+        const sortedIds = [uid1, uid2].sort();
+        return `${defaultPostId}_${sortedIds[0]}_${sortedIds[1]}`;
+    })();
+
     const [chatRooms, setChatRooms] = useState([]);
-    const [selectedRoomId, setSelectedRoomId] = useState(null);
+    const [selectedRoomId, setSelectedRoomId] = useState(defaultRoomId);
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
-    const [viewMode, setViewMode] = useState("list"); // "list" or "chat" (for mobile responsive)
+    const [searchQuery, setSearchQuery] = useState("");
+    const [chatError, setChatError] = useState("");
+    // "list" or "chat" (for mobile responsive)
+    const [viewMode, setViewMode] = useState(defaultRoomId ? "chat" : "list");
     const messagesEndRef = useRef(null);
 
     // 1. Load active chat rooms list
@@ -35,45 +57,40 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                 return timeB - timeA;
             });
             setChatRooms(rooms);
+            setChatError("");
         }, (err) => {
             console.error("Lỗi khi tải phòng chat:", err);
+            setChatError(
+                err.code === "permission-denied"
+                    ? "Không có quyền truy cập Firestore. Kiểm tra lại Security Rules của collection \"chats\"."
+                    : `Không kết nối được Firestore (${err.code || "unknown"}).`
+            );
         });
 
         return () => unsubscribe();
     }, [currentUserId]);
 
-    // 2. Initialize default chat room if provided
+    // 2. Tạo document phòng chat mặc định trên Firestore.
+    // Không await/không setState ở đây — hội thoại đã được mở sẵn qua defaultRoomId,
+    // nên lỗi mạng cũng không chặn được giao diện.
     useEffect(() => {
-        if (!currentUserId || !defaultPostId || !defaultRecipientId) return;
+        if (!defaultRoomId) return;
 
-        async function setupDefaultRoom() {
-            const uid1 = String(currentUserId);
-            const uid2 = String(defaultRecipientId);
-            if (uid1 === uid2) return; // Cannot chat with yourself
-
-            // roomId formula: postId_minId_maxId
-            const sortedIds = [uid1, uid2].sort();
-            const roomId = `${defaultPostId}_${sortedIds[0]}_${sortedIds[1]}`;
-
-            const roomRef = doc(db, "chats", roomId);
-            await setDoc(roomRef, {
-                id: roomId,
-                postId: Number(defaultPostId),
-                postTitle: defaultPostTitle || "Bài viết",
-                postImageUrl: defaultPostImage || "",
-                user1Id: uid1,
-                user1Name: currentUserName,
-                user2Id: uid2,
-                user2Name: defaultRecipientName || "Người đăng tin",
-                users: [uid1, uid2]
-            }, { merge: true });
-
-            setSelectedRoomId(roomId);
-            setViewMode("chat");
-        }
-
-        setupDefaultRoom();
-    }, [currentUserId, defaultPostId, defaultRecipientId]);
+        setDoc(doc(db, "chats", defaultRoomId), {
+            id: defaultRoomId,
+            postId: Number(defaultPostId),
+            postTitle: defaultPostTitle || "Bài viết",
+            postImageUrl: defaultPostImage || "",
+            user1Id: String(currentUserId),
+            user1Name: currentUserName,
+            user2Id: String(defaultRecipientId),
+            user2Name: defaultRecipientName || "Người đăng tin",
+            users: [String(currentUserId), String(defaultRecipientId)]
+        }, { merge: true }).catch((err) => {
+            console.error("Lỗi khi khởi tạo phòng chat:", err);
+        });
+    }, [defaultRoomId, defaultPostId, defaultPostTitle, defaultPostImage,
+        currentUserId, currentUserName, defaultRecipientId, defaultRecipientName]);
 
     // 3. Load messages for selected room
     useEffect(() => {
@@ -99,7 +116,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                 return timeA - timeB;
             });
             setMessages(msgs);
-            
+
             // Auto scroll to bottom
             setTimeout(() => {
                 messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -122,6 +139,15 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
             console.error("Lỗi khi xóa unread ở full chat:", err);
         });
     }, [selectedRoomId, currentUserId, messages.length]);
+
+    // Find details of currently selected room
+    const currentRoom = chatRooms.find(r => r.id === selectedRoomId);
+
+    // Determine recipient name
+    const getRecipientName = (room) => {
+        if (!room) return "Người dùng";
+        return room.user1Id === currentUserId ? room.user2Name : room.user1Name;
+    };
 
     // 4. Send Message
     const handleSendMessage = async (e) => {
@@ -152,180 +178,296 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
             }, { merge: true });
         } catch (err) {
             console.error("Lỗi khi gửi tin nhắn:", err);
+            setNewMessage(textToSend);
         }
     };
 
-    // Find details of currently selected room
-    const currentRoom = chatRooms.find(r => r.id === selectedRoomId);
-    
-    // Determine recipient name
-    const getRecipientName = (room) => {
-        if (!room) return "Người dùng";
-        return room.user1Id === currentUserId ? room.user2Name : room.user1Name;
-    };
+    const keyword = searchQuery.trim().toLowerCase();
+    const filteredRooms = keyword
+        ? chatRooms.filter((room) =>
+              `${getRecipientName(room)} ${room.postTitle || ""} ${room.lastMessage || ""}`
+                  .toLowerCase()
+                  .includes(keyword)
+          )
+        : chatRooms;
+
+    const totalUnread = chatRooms.reduce(
+        (sum, room) => sum + (room[`unread_${currentUserId}`] || 0),
+        0
+    );
+
+    const decorated = decorateMessages(messages);
+    const recipientName = getRecipientName(currentRoom);
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
             {/* Click outside to close */}
             <div className="absolute inset-0" onClick={onClose} />
 
-            <div className="bg-surface-container-lowest rounded-2xl w-full max-w-4xl h-[80vh] shadow-2xl border border-outline-variant/30 flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in duration-200">
-                {/* Header */}
-                <div className="px-5 py-4 bg-surface-container border-b border-outline-variant/30 flex justify-between items-center shrink-0">
-                    <div className="flex items-center gap-2 text-primary">
-                        <MessageSquare size={22} />
-                        <h2 className="text-[17px] font-bold">Hộp thư tin nhắn</h2>
+            <div
+                className="bg-surface-container-lowest rounded-3xl w-full max-w-4xl h-[82vh] border border-outline-variant/40 flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200"
+                style={{ boxShadow: "0 24px 70px rgba(0, 32, 74, 0.28)" }}
+            >
+                {/* ---------- Header ---------- */}
+                <div
+                    className="px-5 py-4 flex justify-between items-center shrink-0 text-on-primary"
+                    style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
+                >
+                    <div className="flex items-center gap-3 text-left">
+                        <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-sm">
+                            <MessagesSquare size={20} />
+                        </div>
+                        <div>
+                            <h2 className="text-[17px] font-bold tracking-[-0.02em] leading-tight">Hộp thư tin nhắn</h2>
+                            <p className="text-[11.5px] text-white/75 leading-tight mt-0.5">
+                                {chatRooms.length} cuộc trò chuyện
+                                {totalUnread > 0 && ` · ${totalUnread} tin chưa đọc`}
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-surface-container-low hover:bg-surface-container-high transition-colors flex items-center justify-center cursor-pointer text-on-surface"
+                        className="w-9 h-9 rounded-full hover:bg-white/20 active:bg-white/30 transition-colors flex items-center justify-center cursor-pointer text-white"
+                        title="Đóng"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex flex-1 overflow-hidden relative">
-                    
-                    {/* Left: Chat Rooms List */}
-                    <div className={`w-full md:w-1/3 border-r border-outline-variant/20 flex flex-col bg-surface-container-lowest overflow-y-auto ${
-                        viewMode === "chat" ? "hidden md:flex" : "flex"
-                    }`}>
-                        {chatRooms.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center p-6 text-outline">
-                                <span className="material-symbols-outlined text-[40px] mb-2">inbox</span>
-                                <p className="text-sm font-medium text-center">Chưa có cuộc trò chuyện nào</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-outline-variant/10">
-                                {chatRooms.map((room) => {
-                                    const isActive = room.id === selectedRoomId;
-                                    const recipientName = getRecipientName(room);
-                                    const avatarLetter = recipientName.charAt(0).toUpperCase();
-                                    const isUnread = (room[`unread_${currentUserId}`] || 0) > 0;
-
-                                    return (
-                                        <div
-                                            key={room.id}
-                                            onClick={() => {
-                                                setSelectedRoomId(room.id);
-                                                setViewMode("chat");
-                                            }}
-                                            className={`p-4 flex gap-3 hover:bg-surface-container-low/50 cursor-pointer transition-colors text-left items-center ${
-                                                isActive ? "bg-primary/5 border-l-4 border-primary" : ""
-                                            }`}
-                                        >
-                                            {/* Avatar placeholder */}
-                                            <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
-                                                {avatarLetter}
-                                            </div>
-                                            {/* Info */}
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex justify-between items-baseline mb-0.5">
-                                                    <h4 className={`text-sm truncate text-on-surface ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
-                                                </div>
-                                                <p className="text-[11.5px] text-primary font-medium truncate mb-1">
-                                                    Bài đăng: {room.postTitle}
-                                                </p>
-                                                {room.lastMessage && (
-                                                    <p className={`text-[12px] truncate ${isUnread ? "text-on-surface font-bold" : "text-on-surface-variant font-medium"}`}>
-                                                        {room.lastSenderId === currentUserId ? "Bạn: " : ""}{room.lastMessage}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            {isUnread && (
-                                                <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shrink-0" />
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+                {chatError && (
+                    <div className="px-5 py-2.5 bg-error-container text-on-error-container text-[12px] flex items-start gap-2 shrink-0 border-b border-error/20 text-left">
+                        <AlertCircle size={15} className="shrink-0 mt-px" />
+                        <span>{chatError}</span>
                     </div>
+                )}
 
-                    {/* Right: Active Chat View */}
-                    <div className={`w-full md:w-2/3 flex flex-col bg-surface-container-low/20 ${
-                        viewMode === "list" ? "hidden md:flex" : "flex"
-                    }`}>
+                {/* ---------- Content Area ---------- */}
+                <div className="flex flex-1 overflow-hidden relative">
+
+                    {/* ===== Left: danh sách hội thoại ===== */}
+                    <aside
+                        className={`w-full md:w-[320px] md:shrink-0 border-r border-outline-variant/30 flex flex-col bg-surface-container-lowest ${
+                            viewMode === "chat" ? "hidden md:flex" : "flex"
+                        }`}
+                    >
+                        {/* Search */}
+                        <div className="p-3 shrink-0 border-b border-outline-variant/20">
+                            <div className="relative">
+                                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/70 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Tìm cuộc trò chuyện..."
+                                    className="w-full pl-9 pr-3 py-2 bg-surface-container-low rounded-full border border-transparent text-[13px] text-on-surface placeholder:text-on-surface-variant/60 transition-all focus:outline-none focus:bg-surface-container-lowest focus:border-primary/60 focus:ring-[3px] focus:ring-primary/10"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-2">
+                            {filteredRooms.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center p-6 gap-2">
+                                    <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline">
+                                        <span className="material-symbols-outlined text-[28px]">inbox</span>
+                                    </div>
+                                    <p className="text-[13px] font-semibold text-on-surface text-center">
+                                        {keyword ? "Không tìm thấy kết quả" : "Chưa có cuộc trò chuyện"}
+                                    </p>
+                                    {!keyword && (
+                                        <p className="text-[11.5px] text-on-surface-variant text-center leading-relaxed max-w-[220px]">
+                                            Nhắn tin từ một bài đăng để bắt đầu trao đổi.
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="space-y-0.5">
+                                    {filteredRooms.map((room) => {
+                                        const isActive = room.id === selectedRoomId;
+                                        const name = getRecipientName(room);
+                                        const isUnread = (room[`unread_${currentUserId}`] || 0) > 0;
+
+                                        return (
+                                            <button
+                                                key={room.id}
+                                                onClick={() => {
+                                                    setSelectedRoomId(room.id);
+                                                    setViewMode("chat");
+                                                }}
+                                                className={`w-full p-2.5 flex gap-3 rounded-xl cursor-pointer transition-colors text-left items-center ${
+                                                    isActive
+                                                        ? "bg-primary/8"
+                                                        : "hover:bg-surface-container-low active:bg-surface-container"
+                                                }`}
+                                            >
+                                                <div className="relative shrink-0">
+                                                    <div
+                                                        className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-[13px] text-white"
+                                                        style={{ backgroundImage: getAvatarGradient(name) }}
+                                                    >
+                                                        {getInitials(name)}
+                                                    </div>
+                                                    {isUnread && (
+                                                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-white" />
+                                                    )}
+                                                </div>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-baseline gap-2">
+                                                        <h4 className={`text-[13.5px] truncate flex-1 text-on-surface ${isUnread ? "font-extrabold" : "font-semibold"}`}>
+                                                            {name}
+                                                        </h4>
+                                                        <span className="text-[10px] text-on-surface-variant/70 shrink-0">
+                                                            {formatRelativeTime(room.lastMessageAt)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[10.5px] text-primary font-medium truncate">
+                                                        {room.postTitle}
+                                                    </p>
+                                                    <p className={`text-[12px] truncate mt-0.5 ${isUnread ? "text-on-surface font-semibold" : "text-on-surface-variant"}`}>
+                                                        {room.lastMessage
+                                                            ? `${room.lastSenderId === currentUserId ? "Bạn: " : ""}${room.lastMessage}`
+                                                            : "Chưa có tin nhắn"}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </aside>
+
+                    {/* ===== Right: khung hội thoại ===== */}
+                    <section
+                        className={`flex-1 min-w-0 flex flex-col bg-surface-container-low/40 ${
+                            viewMode === "list" ? "hidden md:flex" : "flex"
+                        }`}
+                    >
                         {selectedRoomId && currentRoom ? (
                             <>
                                 {/* Conversation Header */}
-                                <div className="px-4 py-3 bg-surface-container-low border-b border-outline-variant/20 flex items-center gap-3 shrink-0 text-left">
+                                <div className="px-4 py-3 bg-surface-container-lowest border-b border-outline-variant/30 flex items-center gap-3 shrink-0 text-left">
                                     <button
                                         onClick={() => setViewMode("list")}
-                                        className="md:hidden p-1.5 rounded-full hover:bg-surface-container text-on-surface-variant"
+                                        className="md:hidden w-8 h-8 shrink-0 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant cursor-pointer"
+                                        title="Quay lại danh sách"
                                     >
                                         <ChevronLeft size={20} />
                                     </button>
-                                    
-                                    <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                                        {getRecipientName(currentRoom).charAt(0).toUpperCase()}
+
+                                    <div className="relative shrink-0">
+                                        <div
+                                            className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-[13px] text-white"
+                                            style={{ backgroundImage: getAvatarGradient(recipientName) }}
+                                        >
+                                            {getInitials(recipientName)}
+                                        </div>
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white" />
                                     </div>
-                                    <div className="min-w-0">
-                                        <h3 className="font-bold text-sm text-on-surface truncate">
-                                            {getRecipientName(currentRoom)}
+
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-bold text-[14px] text-on-surface truncate leading-tight">
+                                            {recipientName}
                                         </h3>
-                                        <p className="text-[11px] text-on-surface-variant truncate">
-                                            Liên quan: {currentRoom.postTitle}
+                                        <p className="text-[11px] text-on-surface-variant truncate mt-0.5">
+                                            {currentRoom.postTitle}
                                         </p>
                                     </div>
+
+                                    {currentRoom.postId && (
+                                        <a
+                                            href={`/posts/${currentRoom.postId}`}
+                                            className="shrink-0 px-3 py-1.5 rounded-full border border-primary/30 text-primary text-[11.5px] font-bold hover:bg-primary/8 transition-colors"
+                                        >
+                                            Xem bài đăng
+                                        </a>
+                                    )}
                                 </div>
 
-                                {/* Messages Bubble Area */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col">
-                                    {messages.length === 0 ? (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-outline">
-                                            <span className="material-symbols-outlined text-[36px] mb-1.5">forum</span>
-                                            <p className="text-xs">Hãy gửi tin nhắn đầu tiên để bắt đầu trò chuyện!</p>
+                                {/* Messages */}
+                                <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col">
+                                    {decorated.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center gap-3 px-8">
+                                            <div
+                                                className="w-16 h-16 rounded-full flex items-center justify-center text-white text-[20px] font-bold shadow-lg"
+                                                style={{ backgroundImage: getAvatarGradient(recipientName) }}
+                                            >
+                                                {getInitials(recipientName)}
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[14px] font-bold text-on-surface">{recipientName}</p>
+                                                <p className="text-[12px] text-on-surface-variant leading-relaxed mt-1 max-w-[300px]">
+                                                    Hãy gửi lời chào để bắt đầu trao đổi về món đồ này.
+                                                </p>
+                                            </div>
                                         </div>
                                     ) : (
-                                        messages.map((msg) => {
+                                        decorated.map((msg) => {
                                             const isOwn = msg.senderId === currentUserId;
-                                            
-                                            if (msg.type === "post_share" && msg.postMetadata) {
-                                                const meta = msg.postMetadata;
-                                                return (
-                                                    <div
-                                                        key={msg.id}
-                                                        onClick={() => {
-                                                            window.location.href = `/posts/${meta.postId}`;
-                                                        }}
-                                                        className={`max-w-[75%] p-3 rounded-2xl border text-left cursor-pointer hover:shadow-md transition-all flex gap-3 items-center shrink-0 ${
-                                                            isOwn
-                                                                ? "bg-blue-50 text-slate-800 border-blue-200 self-end rounded-tr-none"
-                                                                : "bg-white text-slate-800 border-slate-200 self-start rounded-tl-none"
-                                                        }`}
-                                                        title="Click để xem chi tiết bài đăng"
-                                                    >
-                                                        <img
-                                                            src={meta.imageUrl || "/placeholder-image.png"}
-                                                            alt={meta.title}
-                                                            className="w-14 h-14 object-cover rounded-lg bg-slate-100 shrink-0"
-                                                        />
-                                                        <div className="min-w-0 flex-1">
-                                                            <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded bg-green-100 text-green-700 uppercase tracking-wide mb-0.5">
-                                                                {meta.type || "FOUND"}
-                                                            </span>
-                                                            <h5 className="font-bold text-[12.5px] text-slate-800 truncate">{meta.title}</h5>
-                                                            <p className="text-[10px] text-slate-500 truncate flex items-center gap-0.5">
-                                                                <span className="material-symbols-outlined text-[12px]">location_on</span>
-                                                                {meta.address || "Không rõ địa điểm"}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            }
 
                                             return (
-                                                <div
-                                                    key={msg.id}
-                                                    className={`max-w-[75%] px-3.5 py-2 rounded-2xl text-[13px] leading-relaxed break-words text-left ${
-                                                        isOwn
-                                                            ? "bg-primary text-on-primary self-end rounded-tr-none"
-                                                            : "bg-surface-container-high text-on-surface self-start rounded-tl-none border border-outline-variant/10"
-                                                    }`}
-                                                >
-                                                    {msg.text}
+                                                <div key={msg.id} className="w-full flex flex-col">
+                                                    {msg.showDayLabel && msg.dayLabel && (
+                                                        <div className="flex items-center gap-3 my-4">
+                                                            <span className="h-px flex-1 bg-outline-variant/50" />
+                                                            <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider">
+                                                                {msg.dayLabel}
+                                                            </span>
+                                                            <span className="h-px flex-1 bg-outline-variant/50" />
+                                                        </div>
+                                                    )}
+
+                                                    <div
+                                                        className={`flex items-end gap-2 ${msg.isLastOfGroup ? "mb-2" : "mb-0.5"} ${
+                                                            isOwn ? "flex-row-reverse" : "flex-row"
+                                                        }`}
+                                                    >
+                                                        {!isOwn && (
+                                                            <div className="w-7 shrink-0">
+                                                                {msg.isLastOfGroup && (
+                                                                    <div
+                                                                        className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                                                                        style={{ backgroundImage: getAvatarGradient(recipientName) }}
+                                                                    >
+                                                                        {getInitials(recipientName)}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {msg.type === "post_share" && msg.postMetadata ? (
+                                                            <PostShareCard meta={msg.postMetadata} isOwn={isOwn} />
+                                                        ) : (
+                                                            <div
+                                                                className={`max-w-[70%] px-3.5 py-2 text-[13px] leading-[1.5] break-words text-left shadow-sm ${
+                                                                    isOwn
+                                                                        ? "text-on-primary rounded-2xl " +
+                                                                          (msg.isLastOfGroup ? "rounded-br-md" : "") +
+                                                                          (msg.isFirstOfGroup ? "" : " rounded-tr-md")
+                                                                        : "bg-surface-container-lowest text-on-surface border border-outline-variant/40 rounded-2xl " +
+                                                                          (msg.isLastOfGroup ? "rounded-bl-md" : "") +
+                                                                          (msg.isFirstOfGroup ? "" : " rounded-tl-md")
+                                                                }`}
+                                                                style={
+                                                                    isOwn
+                                                                        ? { backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {msg.text}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {msg.isLastOfGroup && formatMessageTime(msg.createdAt) && (
+                                                        <span
+                                                            className={`text-[10px] text-on-surface-variant/70 -mt-1 mb-2.5 ${
+                                                                isOwn ? "self-end" : "self-start ml-[36px]"
+                                                            }`}
+                                                        >
+                                                            {formatMessageTime(msg.createdAt)}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             );
                                         })
@@ -333,35 +475,91 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                     <div ref={messagesEndRef} />
                                 </div>
 
-                                {/* Send Input Form */}
-                                <form onSubmit={handleSendMessage} className="p-3 bg-surface-container border-t border-outline-variant/20 flex gap-2 shrink-0">
+                                {/* Composer */}
+                                <form
+                                    onSubmit={handleSendMessage}
+                                    className="px-3 py-3 bg-surface-container-lowest border-t border-outline-variant/30 flex gap-2 items-center shrink-0"
+                                >
                                     <input
                                         type="text"
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         placeholder="Nhập tin nhắn..."
-                                        className="flex-1 px-4 py-2.5 rounded-full border border-outline-variant bg-surface text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                                        className="flex-1 min-w-0 px-4 py-2.5 rounded-full bg-surface-container-low border border-transparent text-[13.5px] text-on-surface placeholder:text-on-surface-variant/60 transition-all focus:outline-none focus:bg-surface-container-lowest focus:border-primary/60 focus:ring-[3px] focus:ring-primary/10"
                                     />
                                     <button
                                         type="submit"
                                         disabled={!newMessage.trim()}
-                                        className="w-10 h-10 rounded-full bg-primary text-on-primary hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center cursor-pointer flex-shrink-0"
+                                        className="w-10 h-10 rounded-full text-on-primary disabled:opacity-35 disabled:cursor-not-allowed enabled:hover:brightness-110 enabled:active:scale-90 transition-all flex items-center justify-center cursor-pointer shrink-0 shadow-sm"
+                                        style={{ backgroundImage: "linear-gradient(135deg, #005bbf, #1a73e8)" }}
+                                        title="Gửi tin nhắn"
                                     >
-                                        <Send size={16} />
+                                        <Send size={16} className="translate-x-px" />
                                     </button>
                                 </form>
                             </>
                         ) : (
-                            <div className="flex-grow flex flex-col items-center justify-center text-outline p-6">
-                                <span className="material-symbols-outlined text-[64px] mb-3">chat_bubble_outline</span>
-                                <h3 className="text-[17px] font-bold text-on-surface mb-1">Hộp thoại tin nhắn</h3>
-                                <p className="text-xs text-on-surface-variant max-w-[280px] text-center">
-                                    Chọn một cuộc hội thoại từ danh sách bên trái hoặc nhắn tin từ bài đăng đã xác minh.
+                            <div className="flex-1 flex flex-col items-center justify-center p-8 gap-3">
+                                <div className="w-20 h-20 rounded-3xl bg-primary/8 flex items-center justify-center text-primary">
+                                    <MessagesSquare size={36} strokeWidth={1.5} />
+                                </div>
+                                <h3 className="text-[17px] font-bold text-on-surface">Chọn một cuộc trò chuyện</h3>
+                                <p className="text-[12.5px] text-on-surface-variant max-w-[300px] text-center leading-relaxed">
+                                    Chọn hội thoại ở danh sách bên trái, hoặc nhắn tin trực tiếp từ một bài đăng.
                                 </p>
                             </div>
                         )}
-                    </div>
+                    </section>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+/* ============ Thành phần phụ ============ */
+
+function PostShareCard({ meta, isOwn }) {
+    const isLost = meta.type === "LOST";
+
+    return (
+        <div
+            onClick={() => { window.location.href = `/posts/${meta.postId}`; }}
+            title="Xem chi tiết bài đăng"
+            className={`w-[250px] max-w-[70%] rounded-2xl overflow-hidden border text-left cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md shadow-sm shrink-0 bg-surface-container-lowest ${
+                isOwn ? "border-primary/35 rounded-br-md" : "border-outline-variant/50 rounded-bl-md"
+            }`}
+        >
+            <div className="flex gap-3 items-center p-3">
+                {meta.imageUrl ? (
+                    <img
+                        src={meta.imageUrl}
+                        alt={meta.title}
+                        className="w-14 h-14 object-cover rounded-xl bg-surface-container-high shrink-0"
+                    />
+                ) : (
+                    <div className="w-14 h-14 rounded-xl bg-surface-container-high flex items-center justify-center shrink-0 text-outline">
+                        <span className="material-symbols-outlined text-[22px]">image</span>
+                    </div>
+                )}
+                <div className="min-w-0 flex-1">
+                    <span
+                        className={`inline-block px-1.5 py-0.5 text-[8.5px] font-bold rounded uppercase tracking-wide ${
+                            isLost ? "bg-error-container text-on-error-container" : "bg-emerald-100 text-emerald-700"
+                        }`}
+                    >
+                        {isLost ? "Mất đồ" : "Nhặt được"}
+                    </span>
+                    <h5 className="font-bold text-[12.5px] text-on-surface truncate leading-tight mt-1">
+                        {meta.title}
+                    </h5>
+                    <p className="text-[10.5px] text-on-surface-variant truncate flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-[12px]">location_on</span>
+                        {meta.address || "Không rõ địa điểm"}
+                    </p>
+                </div>
+            </div>
+            <div className="px-3 py-2 bg-primary/5 border-t border-outline-variant/30 text-[10.5px] font-bold text-primary text-center">
+                Xem chi tiết bài đăng
             </div>
         </div>
     );

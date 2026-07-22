@@ -337,23 +337,27 @@ export default function ItemDetailPage() {
                                                     const sortedIds = [uid1, uid2].sort();
                                                     const roomId = `${post.post_id || post.id}_${sortedIds[0]}_${sortedIds[1]}`;
 
-                                                    try {
-                                                        const { doc, setDoc } = await import("firebase/firestore");
-                                                        const { db } = await import("../../firebase");
-                                                        await setDoc(doc(db, "chats", roomId), {
-                                                            id: roomId,
-                                                            postId: Number(post.post_id || post.id),
-                                                            postTitle: post.title || "Bài viết",
-                                                            postImageUrl: post.image_url || post.blurred_image_url || "",
-                                                            user1Id: uid1,
-                                                            user1Name: user.full_name || user.name || "Người dùng",
-                                                            user2Id: uid2,
-                                                            user2Name: claimResult.details.owner.full_name || claimResult.details.owner.name || "Người đăng tin",
-                                                            users: [uid1, uid2]
-                                                        }, { merge: true });
-                                                    } catch (err) {
-                                                        console.error("Lỗi khi khởi tạo phòng chat:", err);
-                                                    }
+                                                    // Không await: setDoc chỉ resolve khi server xác nhận,
+                                                    // sẽ treo vô hạn nếu Firestore chưa kết nối được.
+                                                    (async () => {
+                                                        try {
+                                                            const { doc, setDoc } = await import("firebase/firestore");
+                                                            const { db } = await import("../../firebase");
+                                                            await setDoc(doc(db, "chats", roomId), {
+                                                                id: roomId,
+                                                                postId: Number(post.post_id || post.id),
+                                                                postTitle: post.title || "Bài viết",
+                                                                postImageUrl: post.image_url || post.blurred_image_url || "",
+                                                                user1Id: uid1,
+                                                                user1Name: user.full_name || user.name || "Người dùng",
+                                                                user2Id: uid2,
+                                                                user2Name: claimResult.details.owner.full_name || claimResult.details.owner.name || "Người đăng tin",
+                                                                users: [uid1, uid2]
+                                                            }, { merge: true });
+                                                        } catch (err) {
+                                                            console.error("Lỗi khi khởi tạo phòng chat:", err);
+                                                        }
+                                                    })();
 
                                                     openChat({
                                                         roomId,
