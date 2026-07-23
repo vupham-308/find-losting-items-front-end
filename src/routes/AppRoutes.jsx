@@ -18,6 +18,7 @@ import AdminLayout from "../pages/Admin/AdminLayout.jsx"
 import DashboardPage from "../pages/Admin/DashboardPage.jsx"
 import UserManagementPage from "../pages/Admin/UserManagementPage.jsx"
 import PostManagementPage from "../pages/Admin/PostManagementPage.jsx"
+import StockImageManagementPage from "../pages/Admin/StockImageManagementPage.jsx"
 import SystemPage from "../pages/Admin/SystemPage.jsx"
 
 export default function AppRoutes() {
@@ -50,6 +51,7 @@ export default function AppRoutes() {
                 <Route index element={<DashboardPage />} />
                 <Route path="users" element={<UserManagementPage />} />
                 <Route path="posts" element={<PostManagementPage />} />
+                <Route path="stock-images" element={<StockImageManagementPage />} />
                 <Route path="system" element={<SystemPage />} />
             </Route>
         </Routes>

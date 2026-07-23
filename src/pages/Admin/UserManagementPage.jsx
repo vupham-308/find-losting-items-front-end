@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react"
-import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle, ShieldCheck, ShieldOff, Check } from "lucide-react"
+import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle, ShieldCheck, ShieldOff, Check, Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
 import { useAuth } from "../../hooks/useAuth.js"
-import { getUserById, updateUser, deleteUser, changeUserRole } from "../../services/adminService.js"
+import { getUserById, updateUser, deleteUser, changeUserRole, USER_ROLES, USER_SORT_FIELDS } from "../../services/adminService.js"
 
 // Palette cho avatar
 const AVATAR_COLORS = [
@@ -23,6 +23,16 @@ function BoolBadge({ value, title }) {
     )
 }
 
+// Mũi tên chỉ hướng sắp xếp trên tiêu đề cột.
+function SortIcon({ field, sortBy, sortDir }) {
+    if (sortBy !== field) return <ArrowUpDown size={12} className="sort-icon" />
+    return sortDir === "asc" ? (
+        <ArrowUp size={12} className="sort-icon active" />
+    ) : (
+        <ArrowDown size={12} className="sort-icon active" />
+    )
+}
+
 export default function UserManagementPage() {
     const {
         users,
@@ -30,7 +40,12 @@ export default function UserManagementPage() {
         usersError,
         usersPagination,
         usersSearch,
+        usersRole,
+        usersSortBy,
+        usersSortDir,
         setUsersSearch,
+        setUsersRole,
+        setUsersSort,
         fetchUsers,
     } = useAdminStore()
 
@@ -81,6 +96,40 @@ export default function UserManagementPage() {
         (p) => fetchUsers({ page: p }),
         [fetchUsers]
     )
+
+    // Đổi bộ lọc / sắp xếp → luôn quay về trang đầu, tránh rơi vào trang trống.
+    const handleRoleChange = (role) => {
+        setUsersRole(role)
+        fetchUsers({ page: 0, role })
+    }
+
+    const handleSortByChange = (sortBy) => {
+        setUsersSort(sortBy, usersSortDir)
+        fetchUsers({ page: 0, sortBy })
+    }
+
+    const toggleSortDir = () => {
+        const sortDir = usersSortDir === "asc" ? "desc" : "asc"
+        setUsersSort(usersSortBy, sortDir)
+        fetchUsers({ page: 0, sortDir })
+    }
+
+    // Bấm vào tiêu đề cột: cùng cột thì đảo chiều, khác cột thì sắp xếp tăng dần.
+    const handleSortColumn = (field) => {
+        const sortDir = usersSortBy === field && usersSortDir === "asc" ? "desc" : "asc"
+        setUsersSort(field, sortDir)
+        fetchUsers({ page: 0, sortBy: field, sortDir })
+    }
+
+    const hasFilters = usersRole || usersSortBy !== "id" || usersSortDir !== "asc" || usersSearch
+
+    const handleResetFilters = () => {
+        setSearchInput("")
+        setUsersSearch("")
+        setUsersRole("")
+        setUsersSort("id", "asc")
+        fetchUsers({ page: 0, search: "", role: "", sortBy: "id", sortDir: "asc" })
+    }
 
     // Gọi API xem chi tiết
     const handleViewDetail = async (userId) => {
@@ -217,6 +266,68 @@ export default function UserManagementPage() {
                             onChange={(e) => setSearchInput(e.target.value)}
                         />
                     </div>
+
+                    {/* Lọc theo vai trò */}
+                    <div className="stock-filter-select">
+                        <Filter size={15} className="stock-filter-select-icon" />
+                        <select
+                            aria-label="Lọc theo vai trò"
+                            value={usersRole}
+                            onChange={(e) => handleRoleChange(e.target.value)}
+                        >
+                            <option value="">Tất cả vai trò</option>
+                            {USER_ROLES.map((r) => (
+                                <option key={r.value} value={r.value}>
+                                    {r.label}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={15} className="stock-filter-select-caret" />
+                    </div>
+
+                    {/* Sắp xếp: trường + chiều */}
+                    <div className="stock-filter-select">
+                        <ArrowUpDown size={15} className="stock-filter-select-icon" />
+                        <select
+                            aria-label="Sắp xếp theo"
+                            value={usersSortBy}
+                            onChange={(e) => handleSortByChange(e.target.value)}
+                        >
+                            {USER_SORT_FIELDS.map((f) => (
+                                <option key={f.value} value={f.value}>
+                                    {f.label}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={15} className="stock-filter-select-caret" />
+                    </div>
+
+                    <button
+                        className="filter-btn"
+                        onClick={toggleSortDir}
+                        title={
+                            usersSortDir === "asc"
+                                ? "Đang tăng dần — bấm để giảm dần"
+                                : "Đang giảm dần — bấm để tăng dần"
+                        }
+                    >
+                        {usersSortDir === "asc" ? (
+                            <ArrowUp size={14} />
+                        ) : (
+                            <ArrowDown size={14} />
+                        )}
+                        {usersSortDir === "asc" ? "Tăng dần" : "Giảm dần"}
+                    </button>
+
+                    {hasFilters && (
+                        <button
+                            className="filter-btn"
+                            onClick={handleResetFilters}
+                            title="Xoá bộ lọc"
+                        >
+                            <RotateCcw size={14} /> Đặt lại
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -263,13 +374,29 @@ export default function UserManagementPage() {
                                 <table className="admin-table">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
-                                            <th>Người dùng</th>
+                                            {/* Các cột backend cho phép sắp xếp → bấm tiêu đề để đổi */}
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("id")}
+                                            >
+                                                ID <SortIcon field="id" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("name")}
+                                            >
+                                                Người dùng <SortIcon field="name" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
                                             <th>Số điện thoại</th>
                                             <th>Loại</th>
                                             <th>Google</th>
                                             <th>Mật khẩu</th>
-                                            <th>Ngày tạo</th>
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("createdAt")}
+                                            >
+                                                Ngày tạo <SortIcon field="createdAt" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
                                             <th>Hành động</th>
                                         </tr>
                                     </thead>

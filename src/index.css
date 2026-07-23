@@ -421,6 +421,31 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    /* Nhiều bộ lọc (tìm kiếm, vai trò, sắp xếp) ⇒ cho phép xuống dòng ở màn hẹp */
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* Tiêu đề cột có thể bấm để sắp xếp */
+.admin-table th.th-sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s, background 0.2s;
+}
+
+.admin-table th.th-sortable:hover {
+    color: #005bbf;
+    background: #eef3fd;
+}
+
+.sort-icon {
+    vertical-align: -1px;
+    margin-left: 2px;
+    color: #a0a5b2;
+}
+
+.sort-icon.active {
+    color: #005bbf;
 }
 
 .topbar-search {
@@ -560,25 +585,45 @@
     line-height: 1;
 }
 
-.stat-change {
-    display: inline-flex;
+/* Hai thẻ danh sách nhanh ở Dashboard */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 900px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dashboard-list-row {
+    display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 12px;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+}
+
+.dashboard-list-row.divided {
+    border-bottom: 1px solid #ebeef4;
+}
+
+.dashboard-list-title {
+    font-size: 13px;
     font-weight: 600;
-    margin-top: 8px;
-    padding: 3px 8px;
-    border-radius: 6px;
+    color: #181c20;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.stat-change.up {
-    color: #0d7c3e;
-    background: rgba(13, 124, 62, 0.08);
-}
-
-.stat-change.down {
-    color: #ba1a1a;
-    background: rgba(186, 26, 26, 0.08);
+.dashboard-list-sub {
+    font-size: 12px;
+    color: #727785;
+    margin-top: 2px;
+    white-space: nowrap;
 }
 
 .stat-icon {
@@ -1314,6 +1359,247 @@
         padding-left: 0;
         align-items: flex-start;
     }
+}
+
+/* ---------- Quản lý bài đăng ---------- */
+.badge-status {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.badge-status.active {
+    background: rgba(13, 124, 62, 0.08);
+    color: #0d7c3e;
+}
+
+.badge-status.resolved {
+    background: rgba(0, 91, 191, 0.08);
+    color: #005bbf;
+}
+
+.badge-status.deleted {
+    background: rgba(186, 26, 26, 0.08);
+    color: #ba1a1a;
+}
+
+/* Ảnh thu nhỏ trong bảng bài đăng */
+.post-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f1f4fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.post-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.post-thumb.broken {
+    color: #a0a5b2;
+}
+
+/* Modal chi tiết bài đăng */
+.post-detail-image {
+    width: 100%;
+    max-height: 260px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f1f4fa;
+    margin-bottom: 16px;
+}
+
+.post-detail-image img {
+    width: 100%;
+    height: 100%;
+    max-height: 260px;
+    object-fit: contain;
+    display: block;
+}
+
+.post-detail-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #181c20;
+    margin: 0 0 10px;
+    line-height: 1.4;
+}
+
+.post-detail-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.post-detail-desc {
+    font-size: 13.5px;
+    color: #444;
+    line-height: 1.65;
+    margin: 0 0 18px;
+    white-space: pre-wrap;
+}
+
+/* ---------- Quản lý ảnh mặc định (stock image) ---------- */
+/* Dropdown lọc theo danh mục (nằm ở topbar) */
+.stock-filter-select {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.stock-filter-select select {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 38px;
+    /* Chừa chỗ cho icon phễu bên trái và mũi tên bên phải */
+    padding: 0 34px 0 34px;
+    border-radius: 10px;
+    border: 1px solid #dfe3e8;
+    background: #ffffff;
+    color: #181c20;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stock-filter-select select:hover {
+    border-color: #c9d3e4;
+}
+
+.stock-filter-select select:focus {
+    outline: none;
+    border-color: #005bbf;
+    box-shadow: 0 0 0 3px rgba(0, 91, 191, 0.1);
+}
+
+.stock-filter-select-icon,
+.stock-filter-select-caret {
+    position: absolute;
+    color: #727785;
+    pointer-events: none;
+}
+
+.stock-filter-select-icon {
+    left: 11px;
+}
+
+.stock-filter-select-caret {
+    right: 11px;
+}
+
+.stock-image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+    padding: 24px;
+}
+
+.stock-image-card {
+    border: 1px solid #e5e8ee;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.stock-image-card:hover {
+    border-color: #c9d3e4;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.stock-image-thumb {
+    aspect-ratio: 4 / 3;
+    background: #f1f4fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.stock-image-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.stock-image-thumb.broken {
+    flex-direction: column;
+    gap: 6px;
+    color: #a0a5b2;
+    font-size: 12px;
+}
+
+.stock-image-body {
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+}
+
+.stock-image-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #181c20;
+    line-height: 1.4;
+}
+
+.stock-image-url {
+    font-size: 11.5px;
+    color: #727785;
+    text-decoration: none;
+    /* URL ảnh thường rất dài ⇒ cắt 1 dòng để card không bị vỡ layout */
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stock-image-url:hover {
+    color: #005bbf;
+    text-decoration: underline;
+}
+
+.stock-image-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-top: 1px solid #ebeef4;
+    background: #fafbfd;
+}
+
+.stock-image-id {
+    font-size: 12px;
+    font-weight: 500;
+    color: #a0a5b2;
+}
+
+/* Khung xem trước trong modal thêm/sửa */
+.stock-image-preview-box {
+    border: 1px solid #dfe3e8;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 260px;
 }
 
 /* Placeholder pages */

@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
 import {
-    LayoutDashboard, Users, FileText, Settings, ChevronLeft,
+    LayoutDashboard, Users, FileText, Image, Settings, ChevronLeft,
     ChevronRight, Bell, LogOut, Shield
 } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
@@ -18,6 +18,7 @@ const navSections = [
         items: [
             { to: "/admin/users", icon: Users, text: "Quản lý người dùng" },
             { to: "/admin/posts", icon: FileText, text: "Quản lý bài đăng" },
+            { to: "/admin/stock-images", icon: Image, text: "Quản lý ảnh mặc định" },
         ],
     },
     {
