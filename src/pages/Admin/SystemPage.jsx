@@ -248,7 +248,7 @@ export default function SystemPage() {
                             <div className="admin-card" style={{ marginTop: 24 }}>
                                 <div className="admin-card-header">
                                     <div className="admin-card-title">
-                                        <AlertTriangle size={16} color="#ba1a1a" />
+                                        <AlertTriangle size={16} color="var(--admin-danger)" />
                                         Chi tiết lỗi
                                         <span className="badge">{errorEntries.length}</span>
                                     </div>
@@ -264,10 +264,10 @@ export default function SystemPage() {
                                         <tbody>
                                             {errorEntries.map(([key, message]) => (
                                                 <tr key={key}>
-                                                    <td style={{ fontWeight: 600, color: "#181c20" }}>
+                                                    <td style={{ fontWeight: 600, color: "var(--admin-text)" }}>
                                                         {COMPONENTS.find((c) => c.key === key)?.label || key}
                                                     </td>
-                                                    <td style={{ whiteSpace: "normal", color: "#ba1a1a" }}>
+                                                    <td style={{ whiteSpace: "normal", color: "var(--admin-danger)" }}>
                                                         {String(message)}
                                                     </td>
                                                 </tr>
@@ -282,7 +282,7 @@ export default function SystemPage() {
                         <div className="admin-card" style={{ marginTop: 24 }}>
                             <div className="admin-card-header">
                                 <div className="admin-card-title">
-                                    <Activity size={16} color="#005bbf" />
+                                    <Activity size={16} color="var(--admin-brand)" />
                                     Thông tin kiểm tra
                                 </div>
                             </div>

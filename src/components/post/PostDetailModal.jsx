@@ -413,11 +413,11 @@ export default function PostDetailModal({ postId, onClose, onActionComplete }) {
 
                                     {/* Safety tips */}
                                     <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-xl text-left space-y-1 mt-1">
-                                        <h4 className="font-bold text-amber-800 text-[13px] flex items-center gap-1.5">
-                                            <span className="material-symbols-outlined text-[16px] text-amber-700">security</span>
+                                        <h4 className="font-bold text-amber-800 dark:text-amber-300 text-[13px] flex items-center gap-1.5">
+                                            <span className="material-symbols-outlined text-[16px] text-amber-700 dark:text-amber-400">security</span>
                                             Nguyên tắc an toàn
                                         </h4>
-                                        <p className="text-[11.5px] text-amber-950/80 leading-relaxed">
+                                        <p className="text-[11.5px] text-amber-950/80 dark:text-amber-100/85 leading-relaxed">
                                             Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
                                         </p>
                                     </div>

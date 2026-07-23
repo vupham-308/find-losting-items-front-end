@@ -532,10 +532,10 @@ export default function CreatePost() {
         <div className="fixed top-24 right-6 z-[9999] transition-all duration-300 animate-bounce">
           <div className={`flex items-center gap-3 px-6 py-3.5 rounded-xl shadow-lg border ${
             notification.type === 'success' 
-              ? 'bg-green-50 border-green-200 text-green-800' 
+              ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-500/15 dark:border-green-500/30 dark:text-green-300'
               : notification.type === 'error'
-              ? 'bg-red-50 border-red-200 text-red-800'
-              : 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-500/15 dark:border-red-500/30 dark:text-red-300'
+              : 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/15 dark:border-blue-500/30 dark:text-blue-300'
           }`}>
             {notification.type === 'success' && <CheckCircle size={20} className="text-green-600" />}
             {notification.type === 'error' && <AlertCircle size={20} className="text-red-600" />}
@@ -760,7 +760,7 @@ export default function CreatePost() {
                     }}
                     onBlur={handleAddCustomTag}
                     placeholder={selectedTags.length === 0 ? "Nhập thẻ từ khóa (ví dụ: ví, bằng lái,...) and Enter" : "Thêm tag..."}
-                    className="flex-1 min-w-[160px] bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+                    className="flex-1 min-w-[160px] bg-transparent text-sm text-on-surface placeholder-on-surface-variant focus:outline-none"
                   />
                 </div>
               </div>
@@ -830,12 +830,12 @@ export default function CreatePost() {
                       value={formatDDMMYYYY(formData.dateTime)}
                       placeholder="dd/mm/yyyy --:--"
                       onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
-                      className="w-full px-4 py-3 pr-12 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10 select-none text-slate-900 font-semibold"
+                      className="w-full px-4 py-3 pr-12 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10 select-none text-on-surface font-semibold"
                     />
                     <button
                       type="button"
                       onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
-                      className="absolute right-3 text-slate-500 hover:text-primary transition-colors p-1"
+                      className="absolute right-3 text-on-surface-variant hover:text-primary transition-colors p-1"
                     >
                       <span className="material-symbols-outlined text-[22px]">calendar_month</span>
                     </button>
@@ -1104,7 +1104,7 @@ export default function CreatePost() {
                 return (
                   <div key={match.post_id} className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant flex flex-row shadow-sm h-28">
                     {/* Left: Image (Wider width) */}
-                    <div className="w-[35%] shrink-0 h-full relative bg-slate-100">
+                    <div className="w-[35%] shrink-0 h-full relative bg-surface-container">
                       <img
                         src={imgUrl}
                         alt={title}

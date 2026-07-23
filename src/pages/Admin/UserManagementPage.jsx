@@ -331,7 +331,7 @@ export default function UserManagementPage() {
                 </div>
             </div>
 
-            <div className="admin-content">
+            <div className="admin-content list-page">
                 {/* Error */}
                 {usersError && (
                     <div className="admin-error">
@@ -340,7 +340,7 @@ export default function UserManagementPage() {
                 )}
 
                 {/* Card */}
-                <div className="admin-card">
+                <div className="admin-card full-bleed">
                     <div className="admin-card-header">
                         <div className="admin-card-title">
                             Danh sách người dùng
@@ -403,7 +403,7 @@ export default function UserManagementPage() {
                                     <tbody>
                                         {users.map((u) => (
                                             <tr key={u.id}>
-                                                <td style={{ color: "#727785", fontWeight: 500 }}>
+                                                <td style={{ color: "var(--admin-text-muted)", fontWeight: 500 }}>
                                                     #{u.id}
                                                 </td>
                                                 <td>
@@ -541,7 +541,7 @@ export default function UserManagementPage() {
                                                     <span
                                                         key={item}
                                                         style={{
-                                                            color: "#727785",
+                                                            color: "var(--admin-text-muted)",
                                                             padding: "0 4px",
                                                             fontSize: 13,
                                                         }}
@@ -581,7 +581,7 @@ export default function UserManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <User size={18} color="#005bbf" />
+                                <User size={18} color="var(--admin-brand)" />
                                 Chi tiết người dùng
                             </h2>
                             <button className="admin-modal-close" onClick={closeDetail}>
@@ -689,7 +689,7 @@ export default function UserManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <Pencil size={18} color="#005bbf" />
+                                <Pencil size={18} color="var(--admin-brand)" />
                                 Sửa thông tin người dùng
                             </h2>
                             <button
@@ -781,9 +781,9 @@ export default function UserManagementPage() {
                         <div className="admin-modal-header">
                             <h2>
                                 {roleTarget.type === "ADMIN" ? (
-                                    <ShieldOff size={18} color="#9e4300" />
+                                    <ShieldOff size={18} color="var(--admin-warning)" />
                                 ) : (
-                                    <ShieldCheck size={18} color="#005bbf" />
+                                    <ShieldCheck size={18} color="var(--admin-brand)" />
                                 )}
                                 {roleTarget.type === "ADMIN" ? "Hạ quyền quản trị" : "Nâng quyền quản trị"}
                             </h2>
@@ -823,7 +823,7 @@ export default function UserManagementPage() {
                                 <span className={`badge-type ${roleTarget.type === "ADMIN" ? "admin" : "user"}`}>
                                     {roleTarget.type === "ADMIN" ? "Admin" : "Người dùng"}
                                 </span>
-                                <ChevronRight size={18} color="#727785" />
+                                <ChevronRight size={18} color="var(--admin-text-muted)" />
                                 <span className={`badge-type ${roleTarget.type === "ADMIN" ? "user" : "admin"}`}>
                                     {roleTarget.type === "ADMIN" ? "Người dùng" : "Admin"}
                                 </span>
@@ -854,7 +854,7 @@ export default function UserManagementPage() {
                                     borderRadius: 12,
                                     background: "rgba(158, 67, 0, 0.06)",
                                     border: "1px solid rgba(158, 67, 0, 0.15)",
-                                    color: "#9e4300",
+                                    color: "var(--admin-warning)",
                                     fontSize: 12.5,
                                     lineHeight: 1.6,
                                     marginBottom: 16,
@@ -904,7 +904,7 @@ export default function UserManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <AlertTriangle size={18} color="#ba1a1a" />
+                                <AlertTriangle size={18} color="var(--admin-danger)" />
                                 Xoá người dùng
                             </h2>
                             <button

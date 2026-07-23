@@ -186,7 +186,7 @@ export default function StockImageManagementPage() {
                     <div className="admin-error">⚠️ {stockImagesError}</div>
                 )}
 
-                <div className="admin-card">
+                <div className="admin-card full-bleed">
                     <div className="admin-card-header">
                         <div className="admin-card-title">
                             {stockImagesCategory
@@ -280,9 +280,9 @@ export default function StockImageManagementPage() {
                         <div className="admin-modal-header">
                             <h2>
                                 {editTarget ? (
-                                    <Pencil size={18} color="#005bbf" />
+                                    <Pencil size={18} color="var(--admin-brand)" />
                                 ) : (
-                                    <ImageIcon size={18} color="#005bbf" />
+                                    <ImageIcon size={18} color="var(--admin-brand)" />
                                 )}
                                 {editTarget ? "Sửa ảnh mặc định" : "Thêm ảnh mặc định"}
                             </h2>
@@ -336,7 +336,7 @@ export default function StockImageManagementPage() {
 
                             <div className="admin-form-group">
                                 <label className="admin-form-label" htmlFor="stock-url">
-                                    Đường dẫn ảnh <span style={{ color: "#ba1a1a" }}>*</span>
+                                    Đường dẫn ảnh <span style={{ color: "var(--admin-danger)" }}>*</span>
                                 </label>
                                 <input
                                     id="stock-url"
@@ -392,7 +392,7 @@ export default function StockImageManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <AlertTriangle size={18} color="#ba1a1a" />
+                                <AlertTriangle size={18} color="var(--admin-danger)" />
                                 Xoá ảnh mặc định
                             </h2>
                             <button

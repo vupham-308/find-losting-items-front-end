@@ -4,9 +4,10 @@ import { useAuth } from "../../hooks/useAuth.js"
 import { collection, query, where, onSnapshot, doc, setDoc } from "firebase/firestore"
 import { db } from "../../firebase.js"
 import { useChatStore } from "../../stores/chatStore.js"
+import { useThemeStore } from "../../stores/themeStore.js"
 import { Search } from "lucide-react"
 import ChatModal from "../chat/ChatModal.jsx"
-import { getRoomTime } from "../chat/chatUtils.js"
+import { getRoomTime, getRoomStatusKey, ROOM_STATUS_TABS, DEFAULT_ROOM_STATUS_TAB } from "../chat/chatUtils.js"
 
 // Messenger-style time formatting helper
 const formatLastMessageTime = (timestamp) => {
@@ -29,7 +30,9 @@ export default function Header() {
     const [isFullChatOpen, setIsFullChatOpen] = useState(false)
     const [chatRooms, setChatRooms] = useState([])
     const [searchQuery, setSearchQuery] = useState("")
+    const [statusTab, setStatusTab] = useState(DEFAULT_ROOM_STATUS_TAB)
     const { openChat } = useChatStore()
+    const { theme, toggleTheme } = useThemeStore()
     const currentUserId = user ? String(user.userId || user.id) : ""
 
     const handleLogout = async () => {
@@ -64,7 +67,7 @@ export default function Header() {
     const unreadCount = chatRooms.reduce((acc, room) => acc + (room[`unread_${currentUserId}`] || 0), 0)
 
     // Filter chat rooms based on search query
-    const filteredRooms = chatRooms.filter((room) => {
+    const searchedRooms = chatRooms.filter((room) => {
         const recipientName = room.user1Id === currentUserId ? room.user2Name : room.user1Name
         const postTitle = room.postTitle || ""
         const lastMessage = room.lastMessage || ""
@@ -75,6 +78,15 @@ export default function Header() {
             lastMessage.toLowerCase().includes(q)
         )
     })
+
+    // Số hội thoại theo từng trạng thái (tính trên kết quả tìm kiếm hiện tại)
+    const statusCounts = searchedRooms.reduce((acc, room) => {
+        const key = getRoomStatusKey(room, currentUserId)
+        acc[key] = (acc[key] || 0) + 1
+        return acc
+    }, {})
+
+    const filteredRooms = searchedRooms.filter((room) => getRoomStatusKey(room, currentUserId) === statusTab)
 
     return (
         <header className="sticky top-0 w-full z-50 flex justify-between items-center px-gutter-desktop py-stack-sm bg-surface-container-lowest shadow-sm">
@@ -89,6 +101,17 @@ export default function Header() {
             {/* Right side */}
             <div className="flex items-center gap-stack-sm">
 
+                {/* Chuyển chế độ sáng / tối */}
+                <button
+                    onClick={toggleTheme}
+                    className="w-10 h-10 bg-surface-container-low hover:bg-surface-container-high rounded-full transition-all flex items-center justify-center text-on-surface cursor-pointer"
+                    title={theme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+                    aria-label={theme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+                >
+                    <span className="material-symbols-outlined text-[20px]">
+                        {theme === "dark" ? "light_mode" : "dark_mode"}
+                    </span>
+                </button>
 
                 {/* Auth: chưa login */}
                 {!user && (
@@ -113,7 +136,7 @@ export default function Header() {
                             >
                                 <span className="material-symbols-outlined text-[20px]">chat</span>
                                 {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center border border-white">
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4.5 h-4.5 flex items-center justify-center border border-surface-container-lowest">
                                         {unreadCount}
                                     </span>
                                 )}
@@ -123,41 +146,69 @@ export default function Header() {
                             {isChatDropdownOpen && (
                                 <>
                                     {/* Invisible overlay to close dropdown on click outside */}
-                                    <div 
-                                        className="fixed inset-0 z-40" 
+                                    <div
+                                        className="fixed inset-0 z-40"
                                         onClick={() => setIsChatDropdownOpen(false)}
                                     />
-                                    
-                                    <div className="absolute right-0 mt-2 w-[360px] bg-white rounded-2xl shadow-[0_12px_42px_rgba(0,0,0,0.16)] border-2 border-primary z-50 overflow-hidden flex flex-col max-h-[480px] text-left p-4 space-y-3">
+
+                                    <div className="absolute right-0 mt-2 w-[420px] max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-2xl shadow-[0_12px_42px_rgba(0,0,0,0.16)] border-2 border-primary z-50 overflow-hidden flex flex-col max-h-[480px] text-left p-4 space-y-3">
                                         {/* Dropdown Title */}
                                         <div className="flex justify-between items-center shrink-0">
-                                            <h2 className="text-[24px] font-black text-slate-900 tracking-tight">Tin nhắn</h2>
+                                            <h2 className="text-[24px] font-black text-on-surface tracking-tight">Tin nhắn</h2>
                                         </div>
 
                                         {/* Search Input bar */}
                                         <div className="relative shrink-0">
-                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input 
-                                                type="text" 
+                                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                                            <input
+                                                type="text"
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                placeholder="Tìm kiếm tin nhắn..." 
-                                                className="w-full pl-9 pr-4 py-2 bg-slate-100 border-none rounded-full text-[14px] text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                                placeholder="Tìm kiếm tin nhắn..."
+                                                className="w-full pl-9 pr-4 py-2 bg-surface-container-low border-none rounded-full text-[14px] text-on-surface placeholder-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/20"
                                             />
+                                        </div>
+
+                                        {/* Tabs lọc theo trạng thái */}
+                                        <div className="shrink-0 flex border-b border-outline-variant/40">
+                                            {ROOM_STATUS_TABS.map((tab) => {
+                                                const count = statusCounts[tab.key] || 0
+                                                const isActive = statusTab === tab.key
+
+                                                return (
+                                                    <button
+                                                        key={tab.key || "all"}
+                                                        type="button"
+                                                        title={tab.title}
+                                                        onClick={() => setStatusTab(tab.key)}
+                                                        className={`flex-1 min-w-0 -mb-px pb-1.5 border-b-2 text-[11.5px] font-bold whitespace-nowrap transition-colors cursor-pointer ${isActive
+                                                                ? "border-primary text-primary"
+                                                                : "border-transparent text-on-surface-variant hover:text-on-surface"
+                                                            }`}
+                                                    >
+                                                        {tab.label}
+                                                        {count > 0 && (
+                                                            <span className={`ml-1 font-semibold ${isActive ? "text-primary/70" : "text-on-surface-variant/70"}`}>
+                                                                {count}
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
                                         </div>
 
                                         {/* Chat List container */}
                                         <div className="flex-1 overflow-y-auto space-y-1 py-1">
                                             {filteredRooms.length === 0 ? (
-                                                <div className="py-12 text-center text-slate-400 text-xs">
-                                                    Không tìm thấy tin nhắn
+                                                <div className="py-12 text-center text-on-surface-variant text-xs">
+                                                    {searchQuery.trim() ? "Không tìm thấy tin nhắn" : "Không có cuộc trò chuyện ở mục này"}
                                                 </div>
                                             ) : (
                                                 filteredRooms.map((room) => {
                                                     const recipientName = room.user1Id === currentUserId ? room.user2Name : room.user1Name
                                                     const isUnread = (room[`unread_${currentUserId}`] || 0) > 0
                                                     const isMyRequest = String(room.requestedBy) === String(currentUserId)
-                                                    
+
                                                     return (
                                                         <div
                                                             key={room.id}
@@ -180,48 +231,48 @@ export default function Header() {
                                                                 })
                                                                 setIsChatDropdownOpen(false)
                                                             }}
-                                                            className="p-2.5 flex items-center gap-3 hover:bg-slate-100 active:bg-slate-200/80 rounded-xl cursor-pointer transition-colors"
+                                                            className="p-2.5 flex items-center gap-3 hover:bg-surface-container-low active:bg-surface-container rounded-xl cursor-pointer transition-colors"
                                                         >
                                                             {/* User Avatar circle with silhouette style */}
-                                                            <div className="w-12 h-12 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                                                            <div className="w-12 h-12 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0">
                                                                 <span className="material-symbols-outlined text-[28px]">person</span>
                                                             </div>
-                                                            
-                                                             {/* Text info block */}
-                                                             <div className="min-w-0 flex-1 text-left">
-                                                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                                                     {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
-                                                                         isMyRequest ? (
-                                                                             <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
-                                                                                 Đã gửi yêu cầu
-                                                                             </span>
-                                                                         ) : (
-                                                                             <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-sm">
-                                                                                 Cần duyệt
-                                                                             </span>
-                                                                         )
-                                                                     )}
-                                                                     {room.postType === "LOST" && room.status === "REJECTED" && (
-                                                                         <span className="px-1.5 py-0.5 rounded bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
-                                                                             Từ chối
-                                                                         </span>
-                                                                     )}
-                                                                     <h4 className={`text-[14.5px] text-slate-900 truncate ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
-                                                                 </div>
-                                                                 <p className="text-[11px] text-primary truncate mb-0.5 font-medium">
-                                                                     Bài viết: {room.postTitle}
-                                                                 </p>
+
+                                                            {/* Text info block */}
+                                                            <div className="min-w-0 flex-1 text-left">
+                                                                <div className="flex items-center gap-1.5 flex-nowrap min-w-0">
+                                                                    {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
+                                                                        isMyRequest ? (
+                                                                            <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                                Đã gửi yêu cầu
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-sm">
+                                                                                Cần duyệt
+                                                                            </span>
+                                                                        )
+                                                                    )}
+                                                                    {room.postType === "LOST" && room.status === "REJECTED" && (
+                                                                        <span className="px-1.5 py-0.5 rounded bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
+                                                                            Từ chối
+                                                                        </span>
+                                                                    )}
+                                                                    <h4 className={`text-[14.5px] text-on-surface truncate min-w-0 ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
+                                                                </div>
+                                                                <p className="text-[11px] text-primary truncate mb-0.5 font-medium">
+                                                                    Bài viết: {room.postTitle}
+                                                                </p>
                                                                 {room.lastMessage ? (
-                                                                    <p className={`text-[12.5px] truncate ${isUnread ? "text-slate-900 font-bold" : "text-slate-500 font-medium"}`}>
+                                                                    <p className={`text-[12.5px] truncate ${isUnread ? "text-on-surface font-bold" : "text-on-surface-variant font-medium"}`}>
                                                                         {room.lastSenderId === currentUserId ? "Bạn: " : ""}{room.lastMessage}
-                                                                        <span className="mx-1 text-[10px] text-slate-400">•</span>
-                                                                        <span className="text-[11.5px] text-slate-400 font-normal">
+                                                                        <span className="mx-1 text-[10px] text-on-surface-variant/70">•</span>
+                                                                        <span className="text-[11.5px] text-on-surface-variant/70 font-normal">
                                                                             {formatLastMessageTime(room.lastMessageAt)}
                                                                         </span>
                                                                     </p>
                                                                 ) : (
                                                                     room.status === "PENDING" && (
-                                                                        <p className={`text-[12px] truncate ${isMyRequest ? "text-slate-400 italic" : "text-emerald-700 font-semibold"}`}>
+                                                                        <p className={`text-[12px] truncate ${isMyRequest ? "text-on-surface-variant/80 italic" : "text-emerald-600 dark:text-emerald-400 font-semibold"}`}>
                                                                             {isMyRequest ? "Đang chờ đối phương chấp nhận..." : "Yêu cầu nhắn tin mới • Nhấn để duyệt"}
                                                                         </p>
                                                                     )
@@ -237,14 +288,17 @@ export default function Header() {
                                         </div>
 
                                         {/* Dropdown footer */}
-                                        <div className="pt-2 border-t border-slate-150 text-center shrink-0">
-                                            <a href="#" onClick={(e) => { 
-                                                e.preventDefault(); 
-                                                setIsChatDropdownOpen(false); 
-                                                setIsFullChatOpen(true);
-                                            }} className="text-blue-600 hover:underline text-[13.5px] font-bold block py-1">
+                                        <div className="pt-1 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsChatDropdownOpen(false)
+                                                    setIsFullChatOpen(true)
+                                                }}
+                                                className="w-full py-2.5 rounded-xl bg-primary text-white text-[13.5px] font-bold hover:brightness-110 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+                                            >
                                                 Xem tất cả tin nhắn
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </>

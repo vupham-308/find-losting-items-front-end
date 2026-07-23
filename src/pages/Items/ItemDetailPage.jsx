@@ -173,7 +173,7 @@ export default function ItemDetailPage() {
 
                         {/* Image — compact */}
                         <div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/30 shadow-sm">
-                            <div className="relative aspect-[4/3] bg-slate-50 flex items-center justify-center">
+                            <div className="relative aspect-[4/3] bg-surface-container-low flex items-center justify-center">
                                 {((claimResult?.details?.image_url) || post.image_url || post.blurred_image_url) ? (
                                     <img
                                         src={(claimResult?.details?.image_url) || post.image_url || post.blurred_image_url}
@@ -598,11 +598,11 @@ export default function ItemDetailPage() {
 
                         {/* Safety Tips */}
                         <section className="bg-amber-500/10 border border-amber-500/20 p-5 rounded-2xl">
-                            <h4 className="font-bold text-amber-800 text-[14px] flex items-center gap-1.5 mb-2">
-                                <span className="material-symbols-outlined text-[18px] text-amber-700">security</span>
+                            <h4 className="font-bold text-amber-800 dark:text-amber-300 text-[14px] flex items-center gap-1.5 mb-2">
+                                <span className="material-symbols-outlined text-[18px] text-amber-700 dark:text-amber-400">security</span>
                                 Nguyên tắc an toàn
                             </h4>
-                            <p className="text-[13px] text-amber-900/80 leading-relaxed">
+                            <p className="text-[13px] text-amber-900/80 dark:text-amber-100/85 leading-relaxed">
                                 Hãy hẹn gặp trực tiếp tại nơi công cộng đông người. Tuyệt đối <strong>không chuyển khoản bất kỳ khoản phí nào</strong> trước khi nhận được đồ vật thực tế.
                             </p>
                         </section>

@@ -42,7 +42,7 @@ function ItemCard({ item, onClick }) {
     return (
         <div onClick={onClick} className="cursor-pointer bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group flex flex-col justify-between h-full">
                 <div>
-                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
+                    <div className="aspect-[4/3] relative overflow-hidden bg-surface-container">
                         <img
                             src={imgUrl}
                             alt={item.title}

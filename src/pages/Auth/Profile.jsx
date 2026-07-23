@@ -989,7 +989,7 @@ export default function ProfilePage() {
                             <p className="text-on-surface-variant text-sm">Đang tải danh sách bài đăng...</p>
                         </div>
                     ) : myPostsError ? (
-                        <div className="py-8 px-4 text-center bg-red-50 border border-red-100 rounded-xl text-red-800 text-sm">
+                        <div className="py-8 px-4 text-center bg-red-50 border border-red-100 text-red-800 dark:bg-red-500/12 dark:border-red-500/25 dark:text-red-300 rounded-xl text-sm">
                             {myPostsError}
                         </div>
                     ) : myPosts.length === 0 ? (
@@ -1028,7 +1028,7 @@ export default function ProfilePage() {
                                             className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl border border-outline-variant/40 bg-surface-container-low/30 hover:bg-surface-container-low/80 transition-all group text-left cursor-pointer"
                                         >
                                             {/* Left: Image */}
-                                            <div className="w-full sm:w-28 h-28 rounded-lg overflow-hidden shrink-0 bg-slate-100 border border-outline-variant/20 relative">
+                                            <div className="w-full sm:w-28 h-28 rounded-lg overflow-hidden shrink-0 bg-surface-container border border-outline-variant/20 relative">
                                                 <img
                                                     src={post.blurred_image_url || post.original_image_url || post.image_url || "https://placehold.co/400?text=No+Image"}
                                                     alt={post.title}

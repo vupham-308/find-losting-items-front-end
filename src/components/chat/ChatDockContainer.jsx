@@ -17,7 +17,7 @@ class ChatErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="p-3 bg-red-50 text-red-700 text-[11px] rounded-xl border border-red-200 shadow-lg max-w-xs pointer-events-auto">
+                <div className="p-3 bg-red-50 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30 text-[11px] rounded-xl border shadow-lg max-w-xs pointer-events-auto">
                     ⚠️ Lỗi hiển thị chat: {this.state.error?.message || "Lỗi không xác định"}
                 </div>
             );

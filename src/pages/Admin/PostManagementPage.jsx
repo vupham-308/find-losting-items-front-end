@@ -306,10 +306,10 @@ export default function PostManagementPage() {
                 </div>
             </div>
 
-            <div className="admin-content">
+            <div className="admin-content list-page">
                 {postsError && <div className="admin-error">⚠️ {postsError}</div>}
 
-                <div className="admin-card">
+                <div className="admin-card full-bleed">
                     <div className="admin-card-header">
                         <div className="admin-card-title">
                             Danh sách bài đăng
@@ -385,7 +385,7 @@ export default function PostManagementPage() {
                                     <tbody>
                                         {posts.map((p) => (
                                             <tr key={p.id}>
-                                                <td style={{ color: "#727785", fontWeight: 500 }}>
+                                                <td style={{ color: "var(--admin-text-muted)", fontWeight: 500 }}>
                                                     #{p.id}
                                                 </td>
                                                 <td>
@@ -422,7 +422,7 @@ export default function PostManagementPage() {
                                                 <td>
                                                     <StatusBadge status={p.status} />
                                                 </td>
-                                                <td style={{ color: "#727785" }}>
+                                                <td style={{ color: "var(--admin-text-muted)" }}>
                                                     {p.owner_id ? `#${p.owner_id}` : "—"}
                                                 </td>
                                                 <td>
@@ -522,7 +522,7 @@ export default function PostManagementPage() {
                                                     <span
                                                         key={item}
                                                         style={{
-                                                            color: "#727785",
+                                                            color: "var(--admin-text-muted)",
                                                             padding: "0 4px",
                                                             fontSize: 13,
                                                         }}
@@ -562,7 +562,7 @@ export default function PostManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <FileText size={18} color="#005bbf" />
+                                <FileText size={18} color="var(--admin-brand)" />
                                 Chi tiết bài đăng
                             </h2>
                             <button className="admin-modal-close" onClick={closeDetail}>
@@ -639,12 +639,12 @@ export default function PostManagementPage() {
                                     <div className="user-detail-item full-width">
                                         <div className="user-detail-label">Người đăng</div>
                                         <div className="user-detail-value user-detail-value-inline">
-                                            <User size={15} color="#727785" />
-                                            <span style={{ fontWeight: 600, color: "#191c21" }}>
+                                            <User size={15} color="var(--admin-text-muted)" />
+                                            <span style={{ fontWeight: 600, color: "var(--admin-text)" }}>
                                                 {detailPost.owner?.full_name || detailPost.owner?.fullName || detailPost.owner?.name || detailPost.name || detailPost.user?.full_name || detailPost.user?.name || detailPost.userName || "Người dùng"}
                                             </span>
                                             {(detailPost.owner?.email || detailPost.owner?.mail || detailPost.email || detailPost.phone || detailPost.owner?.phone) && (
-                                                <span style={{ color: "#727785", fontSize: "13px", fontWeight: 400 }}>
+                                                <span style={{ color: "var(--admin-text-muted)", fontSize: "13px", fontWeight: 400 }}>
                                                     ({[detailPost.owner?.email || detailPost.owner?.mail || detailPost.email, detailPost.owner?.phone || detailPost.phone].filter(Boolean).join(" · ")})
                                                 </span>
                                             )}
@@ -654,7 +654,7 @@ export default function PostManagementPage() {
                                         <div className="user-detail-item full-width">
                                             <div className="user-detail-label">Địa điểm</div>
                                             <div className="user-detail-value user-detail-value-inline">
-                                                <MapPin size={14} color="#727785" />
+                                                <MapPin size={14} color="var(--admin-text-muted)" />
                                                 {[
                                                     detailPost.location.address,
                                                     detailPost.location.district,
@@ -691,9 +691,9 @@ export default function PostManagementPage() {
                         <div className="admin-modal-header">
                             <h2>
                                 {statusTarget.nextStatus === "RESOLVED" ? (
-                                    <CheckCircle2 size={18} color="#0d7c3e" />
+                                    <CheckCircle2 size={18} color="var(--admin-success)" />
                                 ) : (
-                                    <RotateCw size={18} color="#005bbf" />
+                                    <RotateCw size={18} color="var(--admin-brand)" />
                                 )}
                                 Đổi trạng thái bài đăng
                             </h2>
@@ -717,7 +717,7 @@ export default function PostManagementPage() {
                                 }}
                             >
                                 <StatusBadge status={statusTarget.post.status} />
-                                <ChevronRight size={18} color="#727785" />
+                                <ChevronRight size={18} color="var(--admin-text-muted)" />
                                 <StatusBadge status={statusTarget.nextStatus} />
                             </div>
 
@@ -760,7 +760,7 @@ export default function PostManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <AlertTriangle size={18} color="#ba1a1a" />
+                                <AlertTriangle size={18} color="var(--admin-danger)" />
                                 Xoá bài đăng
                             </h2>
                             <button

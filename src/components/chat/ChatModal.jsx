@@ -9,6 +9,9 @@ import {
     getInitials,
     getAvatarGradient,
     getRoomTime,
+    getRoomStatusKey,
+    ROOM_STATUS_TABS,
+    DEFAULT_ROOM_STATUS_TAB,
 } from "./chatUtils.js";
 
 export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, defaultPostTitle, defaultPostImage, defaultRecipientName, currentUser }) {
@@ -32,6 +35,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+    const [statusTab, setStatusTab] = useState(DEFAULT_ROOM_STATUS_TAB);
     const [chatError, setChatError] = useState("");
     // "list" or "chat" (for mobile responsive)
     const [viewMode, setViewMode] = useState(defaultRoomId ? "chat" : "list");
@@ -180,13 +184,22 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
     };
 
     const keyword = searchQuery.trim().toLowerCase();
-    const filteredRooms = keyword
+    const searchedRooms = keyword
         ? chatRooms.filter((room) =>
               `${getRecipientName(room)} ${room.postTitle || ""} ${room.lastMessage || ""}`
                   .toLowerCase()
                   .includes(keyword)
           )
         : chatRooms;
+
+    // Số hội thoại theo từng trạng thái (tính trên kết quả tìm kiếm hiện tại).
+    const statusCounts = searchedRooms.reduce((acc, room) => {
+        const key = getRoomStatusKey(room, currentUserId);
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+
+    const filteredRooms = searchedRooms.filter((room) => getRoomStatusKey(room, currentUserId) === statusTab);
 
     const totalUnread = chatRooms.reduce(
         (sum, room) => sum + (room[`unread_${currentUserId}`] || 0),
@@ -248,7 +261,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                         }`}
                     >
                         {/* Search */}
-                        <div className="p-3 shrink-0 border-b border-outline-variant/20">
+                        <div className="p-3 pb-2 shrink-0">
                             <div className="relative">
                                 <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/70 pointer-events-none" />
                                 <input
@@ -261,6 +274,35 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                             </div>
                         </div>
 
+                        {/* Tabs lọc theo trạng thái */}
+                        <div className="px-3 shrink-0 flex border-b border-outline-variant/20">
+                            {ROOM_STATUS_TABS.map((tab) => {
+                                const count = statusCounts[tab.key] || 0;
+                                const isActive = statusTab === tab.key;
+
+                                return (
+                                    <button
+                                        key={tab.key || "all"}
+                                        type="button"
+                                        title={tab.title}
+                                        onClick={() => setStatusTab(tab.key)}
+                                        className={`flex-1 min-w-0 -mb-px pb-1.5 border-b-2 text-[11px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                                            isActive
+                                                ? "border-primary text-primary"
+                                                : "border-transparent text-on-surface-variant hover:text-on-surface"
+                                        }`}
+                                    >
+                                        {tab.label}
+                                        {count > 0 && (
+                                            <span className={`ml-1 ${isActive ? "text-primary/70" : "text-on-surface-variant/60"}`}>
+                                                {count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
                         <div className="flex-1 overflow-y-auto p-2">
                             {filteredRooms.length === 0 ? (
                                 <div className="h-full flex flex-col items-center justify-center p-6 gap-2">
@@ -268,9 +310,13 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                         <span className="material-symbols-outlined text-[28px]">inbox</span>
                                     </div>
                                     <p className="text-[13px] font-semibold text-on-surface text-center">
-                                        {keyword ? "Không tìm thấy kết quả" : "Chưa có cuộc trò chuyện"}
+                                        {keyword
+                                            ? "Không tìm thấy kết quả"
+                                            : chatRooms.length === 0
+                                                ? "Chưa có cuộc trò chuyện"
+                                                : "Không có cuộc trò chuyện ở mục này"}
                                     </p>
-                                    {!keyword && (
+                                    {!keyword && chatRooms.length === 0 && (
                                         <p className="text-[11.5px] text-on-surface-variant text-center leading-relaxed max-w-[220px]">
                                             Nhắn tin từ một bài đăng để bắt đầu trao đổi.
                                         </p>
@@ -306,7 +352,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                                         {getInitials(name)}
                                                     </div>
                                                     {isUnread && (
-                                                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-white" />
+                                                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-primary border-2 border-surface-container-lowest" />
                                                     )}
                                                 </div>
 
@@ -315,7 +361,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                                         <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                                             {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
                                                                 isMyRequest ? (
-                                                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
                                                                         Đã gửi yêu cầu
                                                                     </span>
                                                                 ) : (
@@ -381,7 +427,7 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                         >
                                             {getInitials(recipientName)}
                                         </div>
-                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white" />
+                                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-surface-container-lowest" />
                                     </div>
 
                                     <div className="min-w-0 flex-1">
@@ -669,7 +715,7 @@ function PostShareCard({ meta, isOwn }) {
                 <div className="min-w-0 flex-1">
                     <span
                         className={`inline-block px-1.5 py-0.5 text-[8.5px] font-bold rounded uppercase tracking-wide ${
-                            isLost ? "bg-error-container text-on-error-container" : "bg-emerald-100 text-emerald-700"
+                            isLost ? "bg-error-container text-on-error-container" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
                         }`}
                     >
                         {isLost ? "Mất đồ" : "Nhặt được"}

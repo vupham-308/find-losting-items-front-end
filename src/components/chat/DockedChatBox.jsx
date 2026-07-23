@@ -526,7 +526,7 @@ function TypeBadge({ type }) {
             className={`inline-block px-1.5 py-0.5 text-[8px] font-bold rounded uppercase tracking-wide ${
                 isLost
                     ? "bg-error-container text-on-error-container"
-                    : "bg-emerald-100 text-emerald-700"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
             }`}
         >
             {isLost ? "Mất đồ" : "Nhặt được"}

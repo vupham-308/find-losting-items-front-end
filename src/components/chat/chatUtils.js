@@ -17,6 +17,31 @@ export function getRoomTime(room) {
     return toMillis(room.lastMessageAt) || toMillis(room.updatedAt) || toMillis(room.createdAt) || 0;
 }
 
+// ===== Phân loại trạng thái hội thoại (dùng cho tag + tab lọc) =====
+// Mỗi phòng chat chỉ thuộc đúng một nhóm, khớp với tag hiển thị trong danh sách.
+export function getRoomStatusKey(room, currentUserId) {
+    if (!room) return "active";
+    const isMyRequest = String(room.requestedBy) === String(currentUserId);
+
+    if (room.postType === "LOST" && room.status === "REJECTED") return "rejected";
+    if (room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage) {
+        return isMyRequest ? "sent" : "needs_approval";
+    }
+    return "active";
+}
+
+// Danh sách tab lọc theo trạng thái. key === null nghĩa là "tất cả".
+// label: nhãn ngắn hiển thị trên tab; title: mô tả đầy đủ dùng cho tooltip.
+export const ROOM_STATUS_TABS = [
+    { key: "active", label: "Đang chat", title: "Cuộc trò chuyện đang diễn ra" },
+    { key: "needs_approval", label: "Cần duyệt", title: "Yêu cầu nhắn tin chờ bạn duyệt" },
+    { key: "sent", label: "Đã gửi", title: "Yêu cầu bạn đã gửi, chờ đối phương duyệt" },
+    { key: "rejected", label: "Từ chối", title: "Yêu cầu đã bị từ chối" },
+];
+
+// Tab mở mặc định.
+export const DEFAULT_ROOM_STATUS_TAB = ROOM_STATUS_TABS[0].key;
+
 // Giờ hiển thị cạnh bong bóng tin nhắn, vd "14:05".
 export function formatMessageTime(ts) {
     const ms = toMillis(ts);

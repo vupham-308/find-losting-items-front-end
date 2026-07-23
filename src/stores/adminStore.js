@@ -9,7 +9,7 @@ const useAdminStore = create((set, get) => ({
     usersError: null,
     usersPagination: {
         pageNumber: 0,
-        pageSize: 5,
+        pageSize: 10,
         totalElements: 0,
         totalPages: 0,
         last: true,
