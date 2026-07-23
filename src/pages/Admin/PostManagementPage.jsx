@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import {
     RefreshCw, Eye, Trash2, ChevronLeft, ChevronRight, X, FileText, AlertTriangle,
     Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, CheckCircle2,
-    RotateCw, ImageOff, MapPin,
+    RotateCw, ImageOff, MapPin, User,
 } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
 import {
@@ -636,19 +636,18 @@ export default function PostManagementPage() {
                                             {formatDateTime(detailPost.created_at)}
                                         </div>
                                     </div>
-                                    <div className="user-detail-item">
+                                    <div className="user-detail-item full-width">
                                         <div className="user-detail-label">Người đăng</div>
-                                        <div className="user-detail-value">
-                                            {detailPost.owner?.name || "Ẩn danh"}
-                                            {detailPost.owner?.mail
-                                                ? ` (${detailPost.owner.mail})`
-                                                : ""}
-                                        </div>
-                                    </div>
-                                    <div className="user-detail-item">
-                                        <div className="user-detail-label">Chế độ hiển thị</div>
-                                        <div className="user-detail-value">
-                                            {detailPost.hide_post_type || "—"}
+                                        <div className="user-detail-value user-detail-value-inline">
+                                            <User size={15} color="#727785" />
+                                            <span style={{ fontWeight: 600, color: "#191c21" }}>
+                                                {detailPost.owner?.full_name || detailPost.owner?.fullName || detailPost.owner?.name || detailPost.name || detailPost.user?.full_name || detailPost.user?.name || detailPost.userName || "Người dùng"}
+                                            </span>
+                                            {(detailPost.owner?.email || detailPost.owner?.mail || detailPost.email || detailPost.phone || detailPost.owner?.phone) && (
+                                                <span style={{ color: "#727785", fontSize: "13px", fontWeight: 400 }}>
+                                                    ({[detailPost.owner?.email || detailPost.owner?.mail || detailPost.email, detailPost.owner?.phone || detailPost.phone].filter(Boolean).join(" · ")})
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     {detailPost.location && (

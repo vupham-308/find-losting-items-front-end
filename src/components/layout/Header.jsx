@@ -156,6 +156,7 @@ export default function Header() {
                                                 filteredRooms.map((room) => {
                                                     const recipientName = room.user1Id === currentUserId ? room.user2Name : room.user1Name
                                                     const isUnread = (room[`unread_${currentUserId}`] || 0) > 0
+                                                    const isMyRequest = String(room.requestedBy) === String(currentUserId)
                                                     
                                                     return (
                                                         <div
@@ -189,22 +190,28 @@ export default function Header() {
                                                              {/* Text info block */}
                                                              <div className="min-w-0 flex-1 text-left">
                                                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                                                     <h4 className={`text-[14.5px] text-slate-900 truncate ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
                                                                      {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
-                                                                         <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
-                                                                             Chờ duyệt
-                                                                         </span>
+                                                                         isMyRequest ? (
+                                                                             <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                                 Đã gửi yêu cầu
+                                                                             </span>
+                                                                         ) : (
+                                                                             <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-sm">
+                                                                                 Cần duyệt
+                                                                             </span>
+                                                                         )
                                                                      )}
                                                                      {room.postType === "LOST" && room.status === "REJECTED" && (
                                                                          <span className="px-1.5 py-0.5 rounded bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
                                                                              Từ chối
                                                                          </span>
                                                                      )}
+                                                                     <h4 className={`text-[14.5px] text-slate-900 truncate ${isUnread ? "font-black" : "font-bold"}`}>{recipientName}</h4>
                                                                  </div>
                                                                  <p className="text-[11px] text-primary truncate mb-0.5 font-medium">
                                                                      Bài viết: {room.postTitle}
                                                                  </p>
-                                                                {room.lastMessage && (
+                                                                {room.lastMessage ? (
                                                                     <p className={`text-[12.5px] truncate ${isUnread ? "text-slate-900 font-bold" : "text-slate-500 font-medium"}`}>
                                                                         {room.lastSenderId === currentUserId ? "Bạn: " : ""}{room.lastMessage}
                                                                         <span className="mx-1 text-[10px] text-slate-400">•</span>
@@ -212,6 +219,12 @@ export default function Header() {
                                                                             {formatLastMessageTime(room.lastMessageAt)}
                                                                         </span>
                                                                     </p>
+                                                                ) : (
+                                                                    room.status === "PENDING" && (
+                                                                        <p className={`text-[12px] truncate ${isMyRequest ? "text-slate-400 italic" : "text-emerald-700 font-semibold"}`}>
+                                                                            {isMyRequest ? "Đang chờ đối phương chấp nhận..." : "Yêu cầu nhắn tin mới • Nhấn để duyệt"}
+                                                                        </p>
+                                                                    )
                                                                 )}
                                                             </div>
                                                             {isUnread && (

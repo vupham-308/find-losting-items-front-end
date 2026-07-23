@@ -19,6 +19,19 @@ function buildPostFormData(postData) {
     if (postData.longitude) formData.append("longitude", postData.longitude);
     if (postData.locationLevel !== undefined) formData.append("locationLevel", postData.locationLevel);
 
+    if (postData.stockImageId) {
+        formData.append("stockImageId", postData.stockImageId);
+    }
+    if (postData.category) {
+        formData.append("category", postData.category);
+    }
+    if (postData.imageUrl) {
+        formData.append("imageUrl", postData.imageUrl);
+    }
+    if (postData.image_url) {
+        formData.append("image_url", postData.image_url);
+    }
+
     if (postData.image) {
         formData.append("image", postData.image);
     }
@@ -28,6 +41,10 @@ function buildPostFormData(postData) {
     }
 
     return formData;
+}
+
+export function getStockImages() {
+    return axiosClient.get(POST_ENDPOINTS.stockImages);
 }
 
 export function createLostPost(postData) {

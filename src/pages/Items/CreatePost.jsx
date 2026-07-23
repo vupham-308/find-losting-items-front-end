@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, ImagePlus, Send, Info } from 'lucide-react';
-import { createLostPost, createFoundPost, suggestQuestions, generateDescription, getPostDetail } from '../../services/postService';
+import { createLostPost, createFoundPost, suggestQuestions, generateDescription, getPostDetail, getStockImages } from '../../services/postService';
 import { useAuth } from '../../hooks/useAuth';
 import PostDetailModal from '../../components/post/PostDetailModal';
+
+
 
 const HCMC_DISTRICTS = [
   "Quận 1", "Quận 3", "Quận 4", "Quận 5", "Quận 6", "Quận 7", "Quận 8", "Quận 10", "Quận 11", "Quận 12",
@@ -73,6 +75,33 @@ export default function CreatePost() {
     const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState(null);
     const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [stockImagesList, setStockImagesList] = useState([]);
+    const [selectedStockImageId, setSelectedStockImageId] = useState(null);
+    const [isLoadingStockImages, setIsLoadingStockImages] = useState(false);
+    const [serverOffsetMs, setServerOffsetMs] = useState(0);
+    const datePickerRef = useRef(null);
+
+    const getServerNowLocalISO = () => {
+        const serverNow = new Date(Date.now() + serverOffsetMs);
+        const year = serverNow.getFullYear();
+        const month = String(serverNow.getMonth() + 1).padStart(2, '0');
+        const day = String(serverNow.getDate()).padStart(2, '0');
+        const hours = String(serverNow.getHours()).padStart(2, '0');
+        const minutes = String(serverNow.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const formatDDMMYYYY = (isoString) => {
+        if (!isoString) return '';
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return '';
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const year = dt.getFullYear();
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    };
 
     // 2. HELPER FUNCTIONS CALLED IN EFFECTS
     const triggerSuggestQuestions = async (imageFile) => {
@@ -129,6 +158,33 @@ export default function CreatePost() {
     };
 
     // 3. USE EFFECTS
+    useEffect(() => {
+        (async () => {
+            try {
+                setIsLoadingStockImages(true);
+                const res = await getStockImages();
+
+                // Lấy thời gian máy chủ từ timestamp trong envelope API response
+                if (res?.timestamp) {
+                    const serverTime = new Date(res.timestamp);
+                    if (!isNaN(serverTime.getTime())) {
+                        const offset = serverTime.getTime() - Date.now();
+                        setServerOffsetMs(offset);
+                    }
+                }
+
+                const list = res?.data || res || [];
+                if (Array.isArray(list)) {
+                    setStockImagesList(list);
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải danh sách stock-images:", err);
+            } finally {
+                setIsLoadingStockImages(false);
+            }
+        })();
+    }, []);
+
     useEffect(() => {
         if (suggestedQuestions && suggestedQuestions.length > 0) {
             setVerificationsList(
@@ -319,9 +375,24 @@ export default function CreatePost() {
             return;
         }
 
+        // Stock Image / Category validation (mandatory for both lost & found)
+        if (!selectedStockImageId) {
+            setNotification({ message: 'Vui lòng chọn 1 danh mục đồ vật!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
         // District validation in found mode (mandatory)
         if (mode === 'found' && !selectedDistrict) {
             setNotification({ message: 'Vui lòng chọn Quận/Huyện!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
+        // Future time validation (cannot select time after current server time)
+        const serverNow = new Date(Date.now() + serverOffsetMs);
+        if (formData.dateTime && new Date(formData.dateTime) > serverNow) {
+            setNotification({ message: 'Thời gian không thể lớn hơn thời điểm hiện tại!', type: 'error' });
             setTimeout(() => setNotification(null), 3000);
             return;
         }
@@ -367,6 +438,10 @@ export default function CreatePost() {
                 customQuestionsJson = JSON.stringify(mappedQuestions);
             }
 
+            const selectedStockItem = stockImagesList.find(s => s.id === selectedStockImageId);
+            const stockImageUrl = selectedStockItem ? selectedStockItem.image_url : null;
+            const stockCategory = selectedStockItem ? selectedStockItem.category : null;
+
             const postData = {
                 title: formData.title,
                 description: formData.description || null,
@@ -380,6 +455,10 @@ export default function CreatePost() {
                 longitude: finalLon,
                 locationLevel: 0, // Always send 0 as requested
                 image: images.length > 0 ? images[0] : null,
+                stockImageId: selectedStockImageId || null,
+                category: stockCategory || null,
+                imageUrl: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
+                image_url: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
                 phone: user.phone || user.phone_number || "",
                 name: user.name || user.full_name || "Người dùng",
                 customQuestionsJson: customQuestionsJson
@@ -531,6 +610,61 @@ export default function CreatePost() {
                 )}
               </div>
 
+              {/* Category / Stock Image Selection */}
+              <div className="space-y-2">
+                <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+                  <span>
+                    Danh mục đồ vật <span className="text-red-500">*</span>
+                  </span>
+                  {selectedStockImageId && (
+                    <span className="text-xs text-primary normal-case font-semibold">Đã chọn 1 danh mục</span>
+                  )}
+                </label>
+                {isLoadingStockImages ? (
+                  <div className="py-6 text-center text-sm text-on-surface-variant animate-pulse">
+                    Đang tải danh mục đồ vật...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {stockImagesList.map((item) => {
+                      const isSelected = selectedStockImageId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedStockImageId(isSelected ? null : item.id)}
+                          className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer text-center relative ${
+                            isSelected
+                              ? 'border-2 border-primary bg-primary/8 shadow-md text-primary font-bold scale-[1.02]'
+                              : 'border-outline-variant/60 bg-surface hover:bg-surface-container-low text-on-surface hover:border-outline'
+                          }`}
+                        >
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.label}
+                              className="w-12 h-12 object-contain"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-lg">
+                              📦
+                            </div>
+                          )}
+                          <span className="text-[12.5px] leading-tight font-semibold">
+                            {item.label}
+                          </span>
+                          {isSelected && (
+                            <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
@@ -614,16 +748,50 @@ export default function CreatePost() {
 
                 {/* Time */}
                 <div className="space-y-1 md:col-span-2">
-                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                    Thời gian
+                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block">
+                    {mode === 'lost' ? 'Thời gian mất đồ' : 'Thời gian nhặt được'}
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="dateTime"
-                    value={formData.dateTime}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      value={formatDDMMYYYY(formData.dateTime)}
+                      placeholder="dd/mm/yyyy --:--"
+                      onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
+                      className="w-full px-4 py-3 pr-12 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10 select-none text-slate-900 font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
+                      className="absolute right-3 text-slate-500 hover:text-primary transition-colors p-1"
+                    >
+                      <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+                    </button>
+                    <input
+                      ref={datePickerRef}
+                      type="datetime-local"
+                      name="dateTime"
+                      value={formData.dateTime}
+                      max={getServerNowLocalISO()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setFormData(prev => ({ ...prev, dateTime: '' }));
+                          return;
+                        }
+                        const selectedDate = new Date(val);
+                        const serverNow = new Date(Date.now() + serverOffsetMs);
+                        if (selectedDate > serverNow) {
+                          setNotification({ message: 'Thời gian chọn không thể vượt quá thời gian hiện tại của máy chủ!', type: 'error' });
+                          setTimeout(() => setNotification(null), 3000);
+                          setFormData(prev => ({ ...prev, dateTime: getServerNowLocalISO() }));
+                        } else {
+                          setFormData(prev => ({ ...prev, dateTime: val }));
+                        }
+                      }}
+                      className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                    />
+                  </div>
                 </div>
               </div>
 

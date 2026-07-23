@@ -199,15 +199,13 @@ export default function ItemDetailPage() {
                                         : "bg-primary-container text-on-primary-container border border-primary/20"
                                 }`}>{post.type}</span>
 
-                                {post.status && (
+                                {post.status && post.status !== "ACTIVE" && (
                                     <span className={`px-3 py-1 rounded-full text-[11px] font-bold tracking-wider ${
-                                        post.status === "ACTIVE"
-                                            ? "bg-success/10 text-success border border-success/30"
-                                            : post.status === "RESOLVED"
+                                        post.status === "RESOLVED"
                                             ? "bg-outline/10 text-outline border border-outline/30"
                                             : "bg-error/10 text-error border border-error/30"
                                     }`}>
-                                        {post.status === "ACTIVE" ? "ĐANG HOẠT ĐỘNG" : post.status === "RESOLVED" ? "ĐÃ GIẢI QUYẾT" : "ĐÃ XÓA"}
+                                        {post.status === "RESOLVED" ? "ĐÃ GIẢI QUYẾT" : "ĐÃ XÓA"}
                                     </span>
                                 )}
                             </div>

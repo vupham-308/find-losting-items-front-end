@@ -282,10 +282,12 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
                                         const isActive = room.id === selectedRoomId;
                                         const name = getRecipientName(room);
                                         const isUnread = (room[`unread_${currentUserId}`] || 0) > 0;
+                                        const isMyRequest = String(room.requestedBy) === String(currentUserId);
 
                                         return (
                                             <button
                                                 key={room.id}
+                                                type="button"
                                                 onClick={() => {
                                                     setSelectedRoomId(room.id);
                                                     setViewMode("chat");
@@ -310,30 +312,40 @@ export default function ChatModal({ onClose, defaultPostId, defaultRecipientId, 
 
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <h4 className={`text-[13.5px] truncate flex-1 text-on-surface ${isUnread ? "font-extrabold" : "font-semibold"}`}>
-                                                            {name}
-                                                        </h4>
-                                                        {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
-                                                            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
-                                                                Chờ duyệt
-                                                            </span>
-                                                        )}
-                                                        {room.postType === "LOST" && room.status === "REJECTED" && (
-                                                            <span className="px-1.5 py-0.5 rounded-md bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
-                                                                Từ chối
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                                            {room.postType === "LOST" && room.status === "PENDING" && !room.lastMessage && (
+                                                                isMyRequest ? (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 text-[9px] font-bold uppercase tracking-wider shrink-0 border border-amber-500/20">
+                                                                        Đã gửi yêu cầu
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shrink-0 shadow-sm">
+                                                                        Cần duyệt
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                            {room.postType === "LOST" && room.status === "REJECTED" && (
+                                                                <span className="px-1.5 py-0.5 rounded-md bg-error/10 text-error text-[9px] font-bold uppercase tracking-wider shrink-0 border border-error/20">
+                                                                    Từ chối
+                                                                </span>
+                                                            )}
+                                                            <h4 className={`text-[13.5px] truncate text-on-surface ${isUnread ? "font-extrabold" : "font-semibold"}`}>
+                                                                {name}
+                                                            </h4>
+                                                        </div>
                                                         <span className="text-[10px] text-on-surface-variant/70 shrink-0">
                                                             {formatRelativeTime(room.lastMessageAt)}
                                                         </span>
                                                     </div>
                                                     <p className="text-[10.5px] text-primary font-medium truncate">
-                                                        {room.postTitle}
+                                                        Bài viết: {room.postTitle}
                                                     </p>
                                                     <p className={`text-[12px] truncate mt-0.5 ${isUnread ? "text-on-surface font-semibold" : "text-on-surface-variant"}`}>
                                                         {room.lastMessage
                                                             ? `${room.lastSenderId === currentUserId ? "Bạn: " : ""}${room.lastMessage}`
-                                                            : "Chưa có tin nhắn"}
+                                                            : (room.status === "PENDING"
+                                                                ? (isMyRequest ? "Đang chờ đối phương chấp nhận..." : "Yêu cầu nhắn tin mới • Nhấn để duyệt")
+                                                                : "Chưa có tin nhắn")}
                                                     </p>
                                                 </div>
                                             </button>

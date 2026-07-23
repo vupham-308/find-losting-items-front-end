@@ -23,4 +23,5 @@ export const POST_ENDPOINTS = {
     searchImage: "/api/v1/posts/search",
     detail: "/api/v1/posts",
     myPosts: "/api/v1/posts/my-posts",
+    stockImages: "/api/v1/stock-images",
 }
