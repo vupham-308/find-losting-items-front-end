@@ -15,6 +15,8 @@ export const usePostStore = create((set, get) => ({
 
     filterDate: "",
     filterTime: "",
+    filterCategory: "ALL",
+    filterTag: "",
 
     setActiveType: (type) => set({ activeType: type, currentPage: 0, isImageSearchResult: false }),
     setActiveDistrict: (district) => set({ activeDistrict: district, currentPage: 0 }),
@@ -23,57 +25,64 @@ export const usePostStore = create((set, get) => ({
     setIsSearchResult: (isSearchResult) => set({ isSearchResult }),
     setFilterDate: (date) => set({ filterDate: date, currentPage: 0 }),
     setFilterTime: (time) => set({ filterTime: time, currentPage: 0 }),
+    setFilterCategory: (category) => set({ filterCategory: category, currentPage: 0 }),
+    setFilterTag: (tag) => set({ filterTag: tag, currentPage: 0 }),
 
     fetchPosts: async () => {
-        const { currentPage, activeType, activeDistrict, filterDate, filterTime } = get();
+        const { currentPage, activeType, activeDistrict, filterDate, filterTime, filterCategory, filterTag } = get();
         set({ isLoading: true, errorMessage: "" });
         try {
-            const params = {
-                page: currentPage,
-                size: 18,
-                sortBy: "createdAt",
-                sortDir: "DESC",
-                type: activeType,
-                status: "ACTIVE"
-            };
-
-            const hasFilter = (activeDistrict && activeDistrict !== "Tất cả khu vực") || filterDate || filterTime;
+            const hasFilter = (activeDistrict && activeDistrict !== "Tất cả khu vực") ||
+                (filterDate && filterDate.trim() !== "") ||
+                (filterTime && filterTime.trim() !== "") ||
+                (filterCategory && filterCategory !== "ALL" && filterCategory !== "Tất cả danh mục") ||
+                (filterTag && filterTag.trim() !== "");
 
             let response;
             if (hasFilter) {
-                if (activeDistrict && activeDistrict !== "Tất cả khu vực") {
-                    params.district = activeDistrict;
+                const filterParams = {
+                    page: currentPage,
+                    size: 18
+                };
+
+                if (activeType) {
+                    filterParams.type = activeType;
                 }
-                let apiDate = undefined;
+
+                if (activeDistrict && activeDistrict !== "Tất cả khu vực") {
+                    filterParams.district = activeDistrict;
+                }
+
+                if (filterCategory && filterCategory !== "ALL" && filterCategory !== "Tất cả danh mục") {
+                    filterParams.category = filterCategory;
+                }
+
+                if (filterTag && filterTag.trim() !== "") {
+                    filterParams.tag = filterTag.trim();
+                }
+
                 if (filterDate && filterDate.length === 10) {
                     const parts = filterDate.split("/");
                     if (parts.length === 3) {
-                        apiDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        filterParams.date = `${parts[2]}-${parts[1]}-${parts[0]}`;
                     }
                 }
 
-                if (apiDate) {
-                    if (filterTime) {
-                        const [hours, minutes] = filterTime.split(":");
-                        const [year, month, day] = apiDate.split("-").map(Number);
-                        const d = new Date(year, month - 1, day, Number(hours), Number(minutes));
-                        d.setHours(d.getHours() - 7);
-                        
-                        const yyyy = d.getFullYear();
-                        const mm = String(d.getMonth() + 1).padStart(2, '0');
-                        const dd = String(d.getDate()).padStart(2, '0');
-                        const hh = String(d.getHours()).padStart(2, '0');
-                        const min = String(d.getMinutes()).padStart(2, '0');
-                        
-                        params.date = `${yyyy}-${mm}-${dd}`;
-                        params.time = `${hh}:${min}:00`;
-                    } else {
-                        params.date = apiDate;
-                    }
+                if (filterTime && filterTime.trim() !== "") {
+                    filterParams.time = filterTime.includes(":") ? `${filterTime}:00`.slice(0, 8) : filterTime;
                 }
-                response = await postService.filterPosts(params);
+
+                response = await postService.filterPosts(filterParams);
             } else {
-                response = await postService.getAllPosts(params);
+                const defaultParams = {
+                    page: currentPage,
+                    size: 18,
+                    sortBy: "createdAt",
+                    sortDir: "DESC",
+                    type: activeType,
+                    status: "ACTIVE"
+                };
+                response = await postService.getAllPosts(defaultParams);
             }
 
             const apiData = response?.data;
@@ -106,6 +115,8 @@ export const usePostStore = create((set, get) => ({
             activeDistrict: "Tất cả khu vực",
             filterDate: "",
             filterTime: "",
+            filterCategory: "ALL",
+            filterTag: "",
             currentPage: 0,
             isImageSearchResult: false
         });

@@ -40,6 +40,10 @@ function buildPostFormData(postData) {
         formData.append("customQuestionsJson", postData.customQuestionsJson);
     }
 
+    if (Array.isArray(postData.tags) && postData.tags.length > 0) {
+        postData.tags.forEach(t => formData.append("tags", t));
+    }
+
     return formData;
 }
 

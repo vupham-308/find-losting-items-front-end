@@ -7,6 +7,8 @@ export function usePost() {
     const activeType = usePostStore((s) => s.activeType);
     const filterDate = usePostStore((s) => s.filterDate);
     const filterTime = usePostStore((s) => s.filterTime);
+    const filterCategory = usePostStore((s) => s.filterCategory);
+    const filterTag = usePostStore((s) => s.filterTag);
     const activeDistrict = usePostStore((s) => s.activeDistrict);
     const isLoading = usePostStore((s) => s.isLoading);
     const searchQuery = usePostStore((s) => s.searchQuery);
@@ -21,6 +23,8 @@ export function usePost() {
     const setIsSearchResult = usePostStore((s) => s.setIsSearchResult);
     const setFilterDate = usePostStore((s) => s.setFilterDate);
     const setFilterTime = usePostStore((s) => s.setFilterTime);
+    const setFilterCategory = usePostStore((s) => s.setFilterCategory);
+    const setFilterTag = usePostStore((s) => s.setFilterTag);
     const fetchPosts = usePostStore((s) => s.fetchPosts);
     const executeSearch = usePostStore((s) => s.executeSearch);
     const clearSearch = usePostStore((s) => s.clearSearch);
@@ -34,6 +38,8 @@ export function usePost() {
         activeDistrict,
         filterDate,
         filterTime,
+        filterCategory,
+        filterTag,
         isLoading,
         searchQuery,
         isSearchResult,
@@ -46,6 +52,8 @@ export function usePost() {
         setIsSearchResult,
         setFilterDate,
         setFilterTime,
+        setFilterCategory,
+        setFilterTag,
         fetchPosts,
         executeSearch,
         clearSearch,

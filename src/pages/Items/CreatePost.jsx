@@ -79,7 +79,24 @@ export default function CreatePost() {
     const [selectedStockImageId, setSelectedStockImageId] = useState(null);
     const [isLoadingStockImages, setIsLoadingStockImages] = useState(false);
     const [serverOffsetMs, setServerOffsetMs] = useState(0);
+    const [selectedTags, setSelectedTags] = useState([]);
+    const [customTagInput, setCustomTagInput] = useState('');
     const datePickerRef = useRef(null);
+
+    const handleAddCustomTag = () => {
+        const trimmed = customTagInput.trim().replace(/^#/, '');
+        if (!trimmed) return;
+        if (selectedTags.includes(trimmed)) {
+            setCustomTagInput('');
+            return;
+        }
+        setSelectedTags(prev => [...prev, trimmed]);
+        setCustomTagInput('');
+    };
+
+    const handleRemoveTag = (tagName) => {
+        setSelectedTags(prev => prev.filter(t => t !== tagName));
+    };
 
     const getServerNowLocalISO = () => {
         const serverNow = new Date(Date.now() + serverOffsetMs);
@@ -382,6 +399,13 @@ export default function CreatePost() {
             return;
         }
 
+        // Tags validation (mandatory)
+        if (selectedTags.length === 0) {
+            setNotification({ message: 'Vui lòng nhập ít nhất 1 thẻ từ khóa (tag)!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
         // District validation in found mode (mandatory)
         if (mode === 'found' && !selectedDistrict) {
             setNotification({ message: 'Vui lòng chọn Quận/Huyện!', type: 'error' });
@@ -455,13 +479,14 @@ export default function CreatePost() {
                 longitude: finalLon,
                 locationLevel: 0, // Always send 0 as requested
                 image: images.length > 0 ? images[0] : null,
-                stockImageId: selectedStockImageId || null,
+                stockImageId: images.length > 0 ? null : (selectedStockImageId || null),
                 category: stockCategory || null,
                 imageUrl: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
                 image_url: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
                 phone: user.phone || user.phone_number || "",
                 name: user.name || user.full_name || "Người dùng",
-                customQuestionsJson: customQuestionsJson
+                customQuestionsJson: customQuestionsJson,
+                tags: selectedTags
             };
             setNotification({ message: 'Đang tiến hành đăng tin...', type: 'info' });
             const result = mode === 'found'
@@ -487,10 +512,16 @@ export default function CreatePost() {
             }
         } catch (error) {
             console.error("Lỗi khi đăng tin:", error);
-            setNotification({ message: 'Đăng tin thất bại. Vui lòng kiểm tra lại kết nối hoặc dữ liệu!', type: 'error' });
+            const backendMessage =
+                error?.response?.data?.message ||
+                error?.data?.message ||
+                error?.message ||
+                'Đăng tin thất bại. Vui lòng kiểm tra lại kết nối hoặc dữ liệu!';
+
+            setNotification({ message: backendMessage, type: 'error' });
             setTimeout(() => {
                 setNotification(null);
-            }, 4000);
+            }, 6000);
         }
     };
 
@@ -693,6 +724,47 @@ export default function CreatePost() {
                 />
               </div>
 
+              {/* Tags Selection Block (Placed right after Description) */}
+              <div className="space-y-2">
+                <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block">
+                  Thẻ từ khóa (Tags) <span className="text-red-500">*</span>
+                </label>
+
+                {/* Selected Tags list & input */}
+                <div className="p-3 rounded-lg border border-outline-variant bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all flex flex-wrap items-center gap-2 min-h-[48px]">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full border border-primary/20"
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="hover:bg-primary/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-primary text-xs font-extrabold"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        handleAddCustomTag();
+                      }
+                    }}
+                    onBlur={handleAddCustomTag}
+                    placeholder={selectedTags.length === 0 ? "Nhập thẻ từ khóa (ví dụ: ví, bằng lái,...) and Enter" : "Thêm tag..."}
+                    className="flex-1 min-w-[160px] bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
               {/* Grid for Location & Time */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Location Input with Autocomplete */}
@@ -794,6 +866,8 @@ export default function CreatePost() {
                   </div>
                 </div>
               </div>
+
+
 
 
 

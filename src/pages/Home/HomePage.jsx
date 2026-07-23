@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { usePost } from "../../hooks/usePost";
+import { getStockImages } from "../../services/postService";
 import PostDetailModal from "../../components/post/PostDetailModal.jsx";
 import SearchImageModal from "../../components/post/SearchImageModal.jsx";
 
@@ -88,6 +89,8 @@ export default function HomePage() {
         activeDistrict,
         filterDate,
         filterTime,
+        filterCategory,
+        filterTag,
         isLoading,
         searchQuery,
         isSearchResult,
@@ -98,11 +101,54 @@ export default function HomePage() {
         setSearchQuery,
         setFilterDate,
         setFilterTime,
+        setFilterCategory,
+        setFilterTag,
         fetchPosts,
         executeSearch,
         clearSearch,
         resetFilters
     } = usePost();
+
+    const [categoriesList, setCategoriesList] = useState([
+        { value: "ALL", label: "Tất cả danh mục" },
+        { value: "DOCS_CARDS", label: "CCCD / CMND / Giấy tờ" },
+        { value: "WALLET", label: "Ví / Bóp tiền" },
+        { value: "ELECTRONICS", label: "Thiết bị điện tử" },
+        { value: "KEYS", label: "Chìa khóa" },
+        { value: "APPAREL_ACC", label: "Quần áo & Phụ kiện" },
+        { value: "BOOKS_STATIONERY", label: "Sách vở & Văn phòng phẩm" },
+        { value: "PETS", label: "Thú cưng" }
+    ]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const res = await getStockImages();
+                const list = res?.data || res || [];
+                if (Array.isArray(list) && list.length > 0) {
+                    const uniqueCategories = [];
+                    const seen = new Set();
+                    list.forEach(item => {
+                        if (item.category && !seen.has(item.category)) {
+                            seen.add(item.category);
+                            uniqueCategories.push({
+                                value: item.category,
+                                label: item.label || item.category
+                            });
+                        }
+                    });
+                    if (uniqueCategories.length > 0) {
+                        setCategoriesList([
+                            { value: "ALL", label: "Tất cả danh mục" },
+                            ...uniqueCategories
+                        ]);
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi tải danh mục:", err);
+            }
+        })();
+    }, []);
 
     const handleDateMaskChange = (e) => {
         let value = e.target.value;
@@ -286,6 +332,51 @@ export default function HomePage() {
                             </select>
                         </div>
 
+                        {/* Category Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">category</span>
+                                Danh mục
+                            </label>
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                            >
+                                {categoriesList.map((cat) => (
+                                    <option key={cat.value} value={cat.value}>
+                                        {cat.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Tag Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">tag</span>
+                                Thẻ từ khóa (Tag)
+                            </label>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    placeholder="Nhập tag (ví dụ: ví, cccd...)"
+                                    value={filterTag}
+                                    onChange={(e) => setFilterTag(e.target.value)}
+                                    className="w-full pl-3 pr-8 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold"
+                                />
+                                {filterTag && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterTag('')}
+                                        className="absolute right-2.5 text-outline hover:text-on-surface cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Date Field */}
                         <div className="space-y-1.5">
                             <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
@@ -439,7 +530,7 @@ export default function HomePage() {
                             <span className="material-symbols-outlined text-[18px]">tune</span>
                             Bộ lọc tìm kiếm
                         </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                             {/* District Field */}
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
@@ -457,6 +548,51 @@ export default function HomePage() {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+
+                            {/* Category Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">category</span>
+                                    Danh mục
+                                </label>
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                                >
+                                    {categoriesList.map((cat) => (
+                                        <option key={cat.value} value={cat.value}>
+                                            {cat.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tag Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">tag</span>
+                                    Thẻ từ khóa (Tag)
+                                </label>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập tag (ví dụ: ví, cccd...)"
+                                        value={filterTag}
+                                        onChange={(e) => setFilterTag(e.target.value)}
+                                        className="w-full pl-3.5 pr-8 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold"
+                                    />
+                                    {filterTag && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFilterTag('')}
+                                            className="absolute right-3 text-outline hover:text-on-surface cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">close</span>
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Date Field */}
