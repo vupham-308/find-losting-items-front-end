@@ -83,14 +83,53 @@ export default function CreatePost() {
     const [customTagInput, setCustomTagInput] = useState('');
     const datePickerRef = useRef(null);
 
+    const validateAndNormalizeTag = (rawTag) => {
+        if (!rawTag) return { isValid: false, message: null };
+
+        // 1. Chuẩn hóa chữ: Lowercase & Trim khoảng trắng thừa & bỏ '#'
+        let cleaned = rawTag.trim().toLowerCase().replace(/^#+/, '').trim();
+        if (!cleaned) return { isValid: false, message: null };
+
+        // 2. Kiểm tra độ dài 1 tag (Tối thiểu 2 ký tự, tối đa 30 ký tự)
+        if (cleaned.length < 2) {
+            return { isValid: false, message: 'Thẻ (Tag) phải có độ dài từ 2 đến 30 ký tự!' };
+        }
+        if (cleaned.length > 30) {
+            return { isValid: false, message: 'Thẻ (Tag) không được vượt quá 30 ký tự!' };
+        }
+
+        // 3. Kiểm tra ký tự đặc biệt (Chỉ cho phép chữ cái Unicode, chữ số, gạch ngang '-' và khoảng trắng)
+        const validTagRegex = /^[\p{L}\p{N}\s\-]+$/u;
+        if (!validTagRegex.test(cleaned)) {
+            return { isValid: false, message: 'Thẻ (Tag) chỉ được chứa chữ cái, chữ số, gạch ngang (-) và khoảng trắng!' };
+        }
+
+        return { isValid: true, tag: cleaned };
+    };
+
     const handleAddCustomTag = () => {
-        const trimmed = customTagInput.trim().replace(/^#/, '');
-        if (!trimmed) return;
-        if (selectedTags.includes(trimmed)) {
+        const raw = customTagInput;
+        if (!raw.trim()) return;
+
+        const result = validateAndNormalizeTag(raw);
+        if (!result.isValid) {
+            if (result.message) {
+                setNotification({ message: result.message, type: 'error' });
+                setTimeout(() => setNotification(null), 3000);
+            }
             setCustomTagInput('');
             return;
         }
-        setSelectedTags(prev => [...prev, trimmed]);
+
+        const normalizedTag = result.tag;
+
+        // 4. Trùng lặp (Duplicates): Tự động loại bỏ các tag trùng nhau
+        if (selectedTags.includes(normalizedTag)) {
+            setCustomTagInput('');
+            return;
+        }
+
+        setSelectedTags(prev => [...prev, normalizedTag]);
         setCustomTagInput('');
     };
 
@@ -724,24 +763,24 @@ export default function CreatePost() {
                 />
               </div>
 
-              {/* Tags Selection Block (Placed right after Description) */}
-              <div className="space-y-2">
+              {/* Tags Selection Block */}
+              <div className="space-y-1">
                 <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block">
                   Thẻ từ khóa (Tags) <span className="text-red-500">*</span>
                 </label>
 
                 {/* Selected Tags list & input */}
-                <div className="p-3 rounded-lg border border-outline-variant bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all flex flex-wrap items-center gap-2 min-h-[48px]">
+                <div className="w-full px-3.5 py-2.5 rounded-lg border border-outline-variant bg-surface transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 flex flex-wrap items-center gap-2 min-h-[50px]">
                   {selectedTags.map((tag) => (
                     <span
                       key={tag}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full border border-primary/20"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20 hover:bg-primary/15 transition-all"
                     >
-                      #{tag}
+                      <span className="text-primary/70 font-semibold">#</span>{tag}
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="hover:bg-primary/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-primary text-xs font-extrabold"
+                        className="text-primary/60 hover:text-primary hover:bg-primary/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
                       >
                         ×
                       </button>
@@ -759,8 +798,8 @@ export default function CreatePost() {
                       }
                     }}
                     onBlur={handleAddCustomTag}
-                    placeholder={selectedTags.length === 0 ? "Nhập thẻ từ khóa (ví dụ: ví, bằng lái,...) and Enter" : "Thêm tag..."}
-                    className="flex-1 min-w-[160px] bg-transparent text-sm text-on-surface placeholder-on-surface-variant focus:outline-none"
+                    placeholder={selectedTags.length === 0 ? "Nhập tag (ví dụ: ví, cccd, bằng lái...) và nhấn Enter" : "Nhập thêm tag..."}
+                    className="flex-1 min-w-[200px] bg-transparent font-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none py-1"
                   />
                 </div>
               </div>
