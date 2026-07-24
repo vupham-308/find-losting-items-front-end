@@ -36,7 +36,7 @@ function ItemCard({ item, onClick }) {
     const districtName = item.location?.district || item.district || "Không rõ khu vực";
 
     const hasMatchScore = item.match_score !== undefined && item.match_score !== null;
-    const scoreVal = hasMatchScore ? item.match_score * 100 : 0;
+    const scoreVal = hasMatchScore ? (Number(item.match_score) <= 1 ? Number(item.match_score) * 100 : Number(item.match_score)) : 0;
     const matchPercent = scoreVal % 1 === 0 ? scoreVal.toFixed(0) : scoreVal.toFixed(1);
 
     return (
@@ -258,6 +258,14 @@ export default function HomePage() {
         clearSearch();
     };
 
+    const handleApplyFilters = () => {
+        if (searchQuery && searchQuery.trim()) {
+            executeSearch();
+        } else {
+            fetchPosts();
+        }
+    };
+
     const handleLostReport = () => {
         navigate('/create-post?mode=lost');
     };
@@ -441,7 +449,7 @@ export default function HomePage() {
                         {/* Action buttons */}
                         <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant/20">
                             <button
-                                onClick={() => fetchPosts()}
+                                onClick={handleApplyFilters}
                                 className="w-full py-2 bg-primary text-on-primary font-bold text-[11px] rounded-xl shadow-md hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
                             >
                                 <span className="material-symbols-outlined text-[15px]">search</span>
@@ -668,7 +676,7 @@ export default function HomePage() {
                                 Xóa bộ lọc
                             </button>
                             <button
-                                onClick={() => fetchPosts()}
+                                onClick={handleApplyFilters}
                                 className="px-6 py-2.5 bg-primary text-on-primary font-bold text-[11px] rounded-xl shadow-md hover:opacity-90 transition-all cursor-pointer inline-flex items-center gap-1.5 uppercase tracking-wider"
                             >
                                 <span className="material-symbols-outlined text-[15px]">search</span>

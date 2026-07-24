@@ -42,7 +42,8 @@ export const usePostStore = create((set, get) => ({
             if (hasFilter) {
                 const filterParams = {
                     page: currentPage,
-                    size: 18
+                    size: 18,
+                    status: "ACTIVE"
                 };
 
                 if (activeType) {
@@ -124,7 +125,7 @@ export const usePostStore = create((set, get) => ({
     },
 
     executeSearch: async () => {
-        const { searchQuery, activeType } = get();
+        const { searchQuery, activeType, activeDistrict, filterDate, filterTime, filterCategory, filterTag } = get();
         if (!searchQuery.trim()) {
             set({ isSearchResult: false, isImageSearchResult: false });
             get().fetchPosts();
@@ -133,12 +134,38 @@ export const usePostStore = create((set, get) => ({
 
         set({ isLoading: true, errorMessage: "" });
         try {
-            const response = await postService.searchText({
-                text: searchQuery,
-                query: searchQuery,
+            const searchPayload = {
+                text: searchQuery.trim(),
+                query: searchQuery.trim(),
                 top_k: 20,
-                target_type: activeType
-            });
+                target_type: activeType,
+                status: "ACTIVE"
+            };
+
+            if (activeDistrict && activeDistrict !== "Tất cả khu vực") {
+                searchPayload.district = activeDistrict;
+            }
+
+            if (filterCategory && filterCategory !== "ALL" && filterCategory !== "Tất cả danh mục") {
+                searchPayload.category = filterCategory;
+            }
+
+            if (filterTag && filterTag.trim() !== "") {
+                searchPayload.tag = filterTag.trim();
+            }
+
+            if (filterDate && filterDate.length === 10) {
+                const parts = filterDate.split("/");
+                if (parts.length === 3) {
+                    searchPayload.date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+            }
+
+            if (filterTime && filterTime.trim() !== "") {
+                searchPayload.time = filterTime.includes(":") ? `${filterTime}:00`.slice(0, 8) : filterTime;
+            }
+
+            const response = await postService.searchText(searchPayload);
 
             const apiData = response?.data;
             let results = [];
@@ -162,7 +189,13 @@ export const usePostStore = create((set, get) => ({
             }
 
             const normalizedResults = results
-                .filter(item => item.match_score !== 0 && item.match_score !== "0")
+                .filter(item => {
+                    if (item.match_score === undefined || item.match_score === null) return false;
+                    const scoreNum = Number(item.match_score);
+                    if (isNaN(scoreNum)) return false;
+                    const scorePercent = scoreNum <= 1 ? scoreNum * 100 : scoreNum;
+                    return scorePercent >= 50;
+                })
                 .map(item => ({
                     ...item,
                     id: item.post_id || item.id,
