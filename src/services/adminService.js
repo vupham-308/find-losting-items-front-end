@@ -219,27 +219,36 @@ export async function getStockImageById(id) {
 
 /**
  * Thêm ảnh mặc định mới.
- * POST /api/v1/admin/stock-images
- * Body: { category, label, image_url } — category và image_url bắt buộc.
+ * POST /api/v1/admin/stock-images?category={category}&label={label}
+ * category (bắt buộc) & label (tuỳ chọn) nằm ở query; ảnh là file upload (multipart).
  */
-export async function createStockImage({ category, label, imageUrl }) {
-    return axiosClient.post("/api/v1/admin/stock-images", {
-        category,
-        label,
-        image_url: imageUrl,
+export async function createStockImage({ category, label, file }) {
+    const params = new URLSearchParams({ category })
+    if (label) params.append("label", label)
+    const formData = new FormData()
+    formData.append("file", file)
+    return axiosClient.post(`/api/v1/admin/stock-images?${params}`, formData, {
+        headers: { "Content-Type": null }, // để browser tự set multipart boundary
     })
 }
 
 /**
  * Cập nhật ảnh mặc định.
- * PUT /api/v1/admin/stock-images/{id}
+ * PUT /api/v1/admin/stock-images/{id}?category={category}&label={label}
+ * Tất cả đều tuỳ chọn — chỉ gửi file mới khi admin chọn ảnh khác.
  */
-export async function updateStockImage(id, { category, label, imageUrl }) {
-    return axiosClient.put(`/api/v1/admin/stock-images/${id}`, {
-        category,
-        label,
-        image_url: imageUrl,
-    })
+export async function updateStockImage(id, { category, label, file }) {
+    const params = new URLSearchParams()
+    if (category) params.append("category", category)
+    if (label != null) params.append("label", label)
+    const qs = params.toString()
+    const formData = new FormData()
+    if (file) formData.append("file", file)
+    return axiosClient.put(
+        `/api/v1/admin/stock-images/${id}${qs ? `?${qs}` : ""}`,
+        formData,
+        { headers: { "Content-Type": null } }
+    )
 }
 
 /**

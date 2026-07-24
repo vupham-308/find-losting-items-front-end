@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import {
     RefreshCw, Plus, Pencil, Trash2, X, ImageIcon, AlertTriangle, ImageOff,
-    Filter, ChevronDown,
+    Filter, ChevronDown, Upload,
 } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
 import {
@@ -12,7 +12,16 @@ import {
     deleteStockImage,
 } from "../../services/adminService.js"
 
-const EMPTY_FORM = { category: STOCK_IMAGE_CATEGORIES[0].value, label: "", imageUrl: "" }
+// form.file: File mới được chọn (null nếu chưa chọn).
+// form.existingUrl: ảnh hiện có khi đang sửa (dùng để xem trước nếu chưa chọn file mới).
+const EMPTY_FORM = {
+    category: STOCK_IMAGE_CATEGORIES[0].value,
+    label: "",
+    file: null,
+    existingUrl: "",
+}
+
+const MAX_FILE_MB = 5
 
 // Ảnh có thể là URL hỏng ⇒ hiện khung thay thế thay vì icon vỡ của trình duyệt.
 function StockImagePreview({ src, alt }) {
@@ -50,6 +59,8 @@ export default function StockImageManagementPage() {
     const [formOpen, setFormOpen] = useState(false)
     const [editTarget, setEditTarget] = useState(null)
     const [form, setForm] = useState(EMPTY_FORM)
+    // URL xem trước cho file vừa chọn (blob:) — tách riêng để còn revoke, tránh rò bộ nhớ.
+    const [filePreview, setFilePreview] = useState("")
     const [saving, setSaving] = useState(false)
     const [formError, setFormError] = useState(null)
 
@@ -62,12 +73,28 @@ export default function StockImageManagementPage() {
         fetchStockImages({})
     }, [])
 
+    // Thu hồi blob preview còn sót khi rời trang.
+    useEffect(() => {
+        return () => {
+            if (filePreview) URL.revokeObjectURL(filePreview)
+        }
+    }, [filePreview])
+
     const handleFilter = (category) => {
         setStockImagesCategory(category)
         fetchStockImages({ category })
     }
 
+    // Thu hồi blob preview cũ (nếu có) trước khi đặt cái mới / đóng form.
+    const clearFilePreview = () => {
+        setFilePreview((prev) => {
+            if (prev) URL.revokeObjectURL(prev)
+            return ""
+        })
+    }
+
     const openCreate = () => {
+        clearFilePreview()
         setEditTarget(null)
         setForm({
             ...EMPTY_FORM,
@@ -79,11 +106,13 @@ export default function StockImageManagementPage() {
     }
 
     const openEdit = (img) => {
+        clearFilePreview()
         setEditTarget(img)
         setForm({
             category: img.category || EMPTY_FORM.category,
             label: img.label || "",
-            imageUrl: img.image_url || "",
+            file: null,
+            existingUrl: img.image_url || "",
         })
         setFormError(null)
         setFormOpen(true)
@@ -91,31 +120,47 @@ export default function StockImageManagementPage() {
 
     const closeForm = () => {
         if (saving) return
+        clearFilePreview()
         setFormOpen(false)
         setEditTarget(null)
         setFormError(null)
     }
 
-    const handleSave = async () => {
-        const payload = {
-            category: form.category,
-            label: form.label.trim(),
-            imageUrl: form.imageUrl.trim(),
-        }
-        if (!payload.imageUrl) {
-            setFormError("Đường dẫn ảnh không được để trống")
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith("image/")) {
+            setFormError("Vui lòng chọn một tệp ảnh")
             return
         }
-        if (!/^https?:\/\//i.test(payload.imageUrl)) {
-            setFormError("Đường dẫn ảnh phải bắt đầu bằng http:// hoặc https://")
+        if (file.size > MAX_FILE_MB * 1024 * 1024) {
+            setFormError(`Ảnh không được vượt quá ${MAX_FILE_MB}MB`)
+            return
+        }
+        clearFilePreview()
+        setFilePreview(URL.createObjectURL(file))
+        setForm((f) => ({ ...f, file }))
+        setFormError(null)
+    }
+
+    const handleSave = async () => {
+        // Thêm mới bắt buộc có file; sửa thì cho phép giữ nguyên ảnh cũ.
+        if (!editTarget && !form.file) {
+            setFormError("Vui lòng chọn ảnh để tải lên")
             return
         }
 
         setSaving(true)
         setFormError(null)
         try {
+            const payload = {
+                category: form.category,
+                label: form.label.trim(),
+                file: form.file,
+            }
             if (editTarget) await updateStockImage(editTarget.id, payload)
             else await createStockImage(payload)
+            clearFilePreview()
             setFormOpen(false)
             setEditTarget(null)
             await fetchStockImages({})
@@ -335,29 +380,47 @@ export default function StockImageManagementPage() {
                             </div>
 
                             <div className="admin-form-group">
-                                <label className="admin-form-label" htmlFor="stock-url">
-                                    Đường dẫn ảnh <span style={{ color: "var(--admin-danger)" }}>*</span>
+                                <label className="admin-form-label" htmlFor="stock-file">
+                                    Tệp ảnh{" "}
+                                    {!editTarget && (
+                                        <span style={{ color: "#ba1a1a" }}>*</span>
+                                    )}
                                 </label>
-                                <input
-                                    id="stock-url"
-                                    className="admin-form-input"
-                                    type="url"
-                                    value={form.imageUrl}
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, imageUrl: e.target.value }))
-                                    }
-                                    placeholder="https://..."
-                                    disabled={saving}
-                                />
-                            </div>
-
-                            {/* Xem trước để admin biết ngay URL có dùng được không */}
-                            <div className="admin-form-group">
-                                <div className="admin-form-label">Xem trước</div>
-                                <div className="stock-image-preview-box">
-                                    <StockImagePreview src={form.imageUrl.trim()} alt="Xem trước" />
+                                <label className="stock-file-input" htmlFor="stock-file">
+                                    <Upload size={16} />
+                                    <span>
+                                        {form.file
+                                            ? form.file.name
+                                            : editTarget
+                                            ? "Chọn ảnh mới để thay thế (tuỳ chọn)"
+                                            : "Chọn ảnh để tải lên"}
+                                    </span>
+                                    <input
+                                        id="stock-file"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        disabled={saving}
+                                        hidden
+                                    />
+                                </label>
+                                <div className="admin-form-hint">
+                                    Định dạng ảnh, tối đa {MAX_FILE_MB}MB.
                                 </div>
                             </div>
+
+                            {/* Xem trước: ưu tiên file mới, nếu không thì ảnh hiện có (khi sửa) */}
+                            {(filePreview || form.existingUrl) && (
+                                <div className="admin-form-group">
+                                    <div className="admin-form-label">Xem trước</div>
+                                    <div className="stock-image-preview-box">
+                                        <StockImagePreview
+                                            src={filePreview || form.existingUrl}
+                                            alt="Xem trước"
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             {formError && (
                                 <div className="admin-error" style={{ marginBottom: 12 }}>
