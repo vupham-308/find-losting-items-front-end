@@ -54,7 +54,9 @@ axiosClient.interceptors.response.use(
             useAuthStore.getState().token &&
             !originalRequest._retry &&
             originalRequest.url !== AUTH_ENDPOINTS.refreshToken &&
-            originalRequest.url !== AUTH_ENDPOINTS.login
+            originalRequest.url !== AUTH_ENDPOINTS.login &&
+            originalRequest.url !== AUTH_ENDPOINTS.register &&
+            originalRequest.url !== AUTH_ENDPOINTS.google
         ) {
             // Nếu đang refresh → xếp hàng chờ
             if (isRefreshing) {

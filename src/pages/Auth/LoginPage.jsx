@@ -7,7 +7,7 @@ import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
 export default function LoginPage() {
     const navigate = useNavigate()
-    const { login } = useAuth()
+    const { login, logout } = useAuth()
     const [mail, setMail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
