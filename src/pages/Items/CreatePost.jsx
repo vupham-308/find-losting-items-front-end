@@ -371,17 +371,35 @@ export default function CreatePost() {
 
 
 
+  const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     
     const file = files[0];
+
+    // 1. Kiểm tra định dạng tệp (chỉ cho phép tệp hình ảnh)
+    if (!file.type || !file.type.startsWith('image/')) {
+      setNotification({ message: 'Vui lòng chọn tệp định dạng hình ảnh (JPG, PNG, WEBP, GIF...)!', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      e.target.value = '';
+      return;
+    }
+
+    // 2. Kiểm tra dung lượng tệp (tối đa 10MB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setNotification({ message: 'Dung lượng hình ảnh không được vượt quá 10MB!', type: 'error' });
+      setTimeout(() => setNotification(null), 3000);
+      e.target.value = '';
+      return;
+    }
+
     setImages([file]);
 
     if (mode === 'found' && formData.visibility === 'match') {
       triggerSuggestQuestions(file);
     }
-
   };
 
   const removeImage = (index) => {
@@ -534,12 +552,21 @@ export default function CreatePost() {
             
             console.log("Kết quả từ server:", result);
 
-            const matches = result?.matches || result?.data?.matches || result?.match || [];
-            if (matches && matches.length > 0) {
+            const rawMatches = result?.matches || result?.data?.matches || result?.match || [];
+            const filteredMatches = rawMatches.filter(item => {
+                const scoreVal = item.match_score ?? item.score ?? item.confidence ?? item.similarity;
+                if (scoreVal === undefined || scoreVal === null) return false;
+                const scoreNum = Number(scoreVal);
+                if (isNaN(scoreNum)) return false;
+                const scorePercent = scoreNum <= 1 ? scoreNum * 100 : scoreNum;
+                return scorePercent >= 50;
+            });
+
+            if (filteredMatches && filteredMatches.length > 0) {
                 setNotification({ message: 'Đăng tin thành công! Đang đối chiếu các tin tương đồng...', type: 'success' });
                 setTimeout(() => {
                     setNotification(null);
-                    setMatchesList(matches);
+                    setMatchesList(filteredMatches);
                     setIsMatchesModalOpen(true);
                 }, 1500);
             } else {
@@ -649,9 +676,10 @@ export default function CreatePost() {
                 <label className="border-2 border-dashed border-outline-variant rounded-xl p-8 flex flex-col items-center justify-center bg-surface-container-low hover:bg-surface-container-high transition-colors cursor-pointer group">
                   <ImagePlus size={48} className="text-primary mb-2 group-hover:scale-110 transition-transform" />
                   <p className="font-body-lg font-semibold">Nhấn để tải ảnh lên</p>
+                  <p className="text-xs text-on-surface-variant/70 mt-1 font-medium">Chỉ chấp nhận file hình ảnh (Tối đa 10MB)</p>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/*"
                     onChange={handleImageUpload}
                     className="hidden"
                   />

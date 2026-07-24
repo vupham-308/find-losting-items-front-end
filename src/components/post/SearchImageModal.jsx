@@ -64,7 +64,13 @@ export default function SearchImageModal({ onClose }) {
             }
 
             const normalized = rawResults
-                .filter(item => item.match_score !== 0 && item.match_score !== "0")
+                .filter(item => {
+                    if (item.match_score === undefined || item.match_score === null) return false;
+                    const scoreNum = Number(item.match_score);
+                    if (isNaN(scoreNum)) return false;
+                    const scorePercent = scoreNum <= 1 ? scoreNum * 100 : scoreNum;
+                    return scorePercent >= 50;
+                })
                 .map(item => ({
                     ...item,
                     id: item.post_id || item.id,
