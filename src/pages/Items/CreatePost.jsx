@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, CheckCircle, ImagePlus, Send, Info } from 'lucide-react';
-import { createLostPost, createFoundPost, suggestQuestions, generateDescription, getPostDetail } from '../../services/postService';
+import { createLostPost, createFoundPost, suggestQuestions, generateDescription, getPostDetail, getStockImages } from '../../services/postService';
 import { useAuth } from '../../hooks/useAuth';
 import PostDetailModal from '../../components/post/PostDetailModal';
+
+
 
 const HCMC_DISTRICTS = [
   "Quận 1", "Quận 3", "Quận 4", "Quận 5", "Quận 6", "Quận 7", "Quận 8", "Quận 10", "Quận 11", "Quận 12",
@@ -73,6 +75,89 @@ export default function CreatePost() {
     const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
     const [selectedPostId, setSelectedPostId] = useState(null);
     const [selectedDistrict, setSelectedDistrict] = useState('');
+    const [stockImagesList, setStockImagesList] = useState([]);
+    const [selectedStockImageId, setSelectedStockImageId] = useState(null);
+    const [isLoadingStockImages, setIsLoadingStockImages] = useState(false);
+    const [serverOffsetMs, setServerOffsetMs] = useState(0);
+    const [selectedTags, setSelectedTags] = useState([]);
+    const [customTagInput, setCustomTagInput] = useState('');
+    const datePickerRef = useRef(null);
+
+    const validateAndNormalizeTag = (rawTag) => {
+        if (!rawTag) return { isValid: false, message: null };
+
+        // 1. Chuẩn hóa chữ: Lowercase & Trim khoảng trắng thừa & bỏ '#'
+        let cleaned = rawTag.trim().toLowerCase().replace(/^#+/, '').trim();
+        if (!cleaned) return { isValid: false, message: null };
+
+        // 2. Kiểm tra độ dài 1 tag (Tối thiểu 2 ký tự, tối đa 30 ký tự)
+        if (cleaned.length < 2) {
+            return { isValid: false, message: 'Thẻ (Tag) phải có độ dài từ 2 đến 30 ký tự!' };
+        }
+        if (cleaned.length > 30) {
+            return { isValid: false, message: 'Thẻ (Tag) không được vượt quá 30 ký tự!' };
+        }
+
+        // 3. Kiểm tra ký tự đặc biệt (Chỉ cho phép chữ cái Unicode, chữ số, gạch ngang '-' và khoảng trắng)
+        const validTagRegex = /^[\p{L}\p{N}\s\-]+$/u;
+        if (!validTagRegex.test(cleaned)) {
+            return { isValid: false, message: 'Thẻ (Tag) chỉ được chứa chữ cái, chữ số, gạch ngang (-) và khoảng trắng!' };
+        }
+
+        return { isValid: true, tag: cleaned };
+    };
+
+    const handleAddCustomTag = () => {
+        const raw = customTagInput;
+        if (!raw.trim()) return;
+
+        const result = validateAndNormalizeTag(raw);
+        if (!result.isValid) {
+            if (result.message) {
+                setNotification({ message: result.message, type: 'error' });
+                setTimeout(() => setNotification(null), 3000);
+            }
+            setCustomTagInput('');
+            return;
+        }
+
+        const normalizedTag = result.tag;
+
+        // 4. Trùng lặp (Duplicates): Tự động loại bỏ các tag trùng nhau
+        if (selectedTags.includes(normalizedTag)) {
+            setCustomTagInput('');
+            return;
+        }
+
+        setSelectedTags(prev => [...prev, normalizedTag]);
+        setCustomTagInput('');
+    };
+
+    const handleRemoveTag = (tagName) => {
+        setSelectedTags(prev => prev.filter(t => t !== tagName));
+    };
+
+    const getServerNowLocalISO = () => {
+        const serverNow = new Date(Date.now() + serverOffsetMs);
+        const year = serverNow.getFullYear();
+        const month = String(serverNow.getMonth() + 1).padStart(2, '0');
+        const day = String(serverNow.getDate()).padStart(2, '0');
+        const hours = String(serverNow.getHours()).padStart(2, '0');
+        const minutes = String(serverNow.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const formatDDMMYYYY = (isoString) => {
+        if (!isoString) return '';
+        const dt = new Date(isoString);
+        if (isNaN(dt.getTime())) return '';
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0');
+        const year = dt.getFullYear();
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        return `${day}/${month}/${year} ${hours}:${minutes}`;
+    };
 
     // 2. HELPER FUNCTIONS CALLED IN EFFECTS
     const triggerSuggestQuestions = async (imageFile) => {
@@ -130,6 +215,33 @@ export default function CreatePost() {
 
     // 3. USE EFFECTS
     useEffect(() => {
+        (async () => {
+            try {
+                setIsLoadingStockImages(true);
+                const res = await getStockImages();
+
+                // Lấy thời gian máy chủ từ timestamp trong envelope API response
+                if (res?.timestamp) {
+                    const serverTime = new Date(res.timestamp);
+                    if (!isNaN(serverTime.getTime())) {
+                        const offset = serverTime.getTime() - Date.now();
+                        setServerOffsetMs(offset);
+                    }
+                }
+
+                const list = res?.data || res || [];
+                if (Array.isArray(list)) {
+                    setStockImagesList(list);
+                }
+            } catch (err) {
+                console.error("Lỗi khi tải danh sách stock-images:", err);
+            } finally {
+                setIsLoadingStockImages(false);
+            }
+        })();
+    }, []);
+
+    useEffect(() => {
         if (suggestedQuestions && suggestedQuestions.length > 0) {
             setVerificationsList(
                 suggestedQuestions.map(q => ({
@@ -147,6 +259,14 @@ export default function CreatePost() {
             setSubmitClicked(false);
         }
     }, [isGeneratingQuestions, submitClicked]);
+
+    // Set visibility to match automatically for found posts, public for lost posts
+    useEffect(() => {
+        setFormData(prev => ({
+            ...prev,
+            visibility: mode === 'found' ? 'match' : 'public'
+        }));
+    }, [mode]);
 
     // Tự động gọi suggest questions khi chuyển sang WHEN_MATCH và đã có ảnh
     useEffect(() => {
@@ -294,6 +414,16 @@ export default function CreatePost() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
+        // Check authentication before sending post
+        if (!user) {
+            setNotification({ message: 'Bạn cần đăng nhập để thực hiện đăng tin!', type: 'error' });
+            setTimeout(() => {
+                setNotification(null);
+                navigate('/login?redirect=/create-post');
+            }, 2000);
+            return;
+        }
+
         // Image validation in found mode (mandatory)
         if (mode === 'found' && images.length === 0) {
             setNotification({ message: 'Hình ảnh là bắt buộc đối với tin đăng tìm thấy!', type: 'error' });
@@ -301,9 +431,31 @@ export default function CreatePost() {
             return;
         }
 
+        // Stock Image / Category validation (mandatory for both lost & found)
+        if (!selectedStockImageId) {
+            setNotification({ message: 'Vui lòng chọn 1 danh mục đồ vật!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
+        // Tags validation (mandatory)
+        if (selectedTags.length === 0) {
+            setNotification({ message: 'Vui lòng nhập ít nhất 1 thẻ từ khóa (tag)!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
         // District validation in found mode (mandatory)
         if (mode === 'found' && !selectedDistrict) {
             setNotification({ message: 'Vui lòng chọn Quận/Huyện!', type: 'error' });
+            setTimeout(() => setNotification(null), 3000);
+            return;
+        }
+
+        // Future time validation (cannot select time after current server time)
+        const serverNow = new Date(Date.now() + serverOffsetMs);
+        if (formData.dateTime && new Date(formData.dateTime) > serverNow) {
+            setNotification({ message: 'Thời gian không thể lớn hơn thời điểm hiện tại!', type: 'error' });
             setTimeout(() => setNotification(null), 3000);
             return;
         }
@@ -349,11 +501,15 @@ export default function CreatePost() {
                 customQuestionsJson = JSON.stringify(mappedQuestions);
             }
 
+            const selectedStockItem = stockImagesList.find(s => s.id === selectedStockImageId);
+            const stockImageUrl = selectedStockItem ? selectedStockItem.image_url : null;
+            const stockCategory = selectedStockItem ? selectedStockItem.category : null;
+
             const postData = {
                 title: formData.title,
                 description: formData.description || null,
                 eventTime: formData.dateTime ? new Date(formData.dateTime).toISOString() : null,
-                userId: user ? (user.userId || user.id) : undefined,
+                userId: user.userId || user.id,
                 hidePostType: mode === 'found' && formData.visibility === 'match' ? 'WHEN_MATCH' : 'PUBLIC',
                 address: finalAddress,
                 district: finalDistrict,
@@ -362,9 +518,14 @@ export default function CreatePost() {
                 longitude: finalLon,
                 locationLevel: 0, // Always send 0 as requested
                 image: images.length > 0 ? images[0] : null,
-                phone: user ? user.phone : formData.phone,
-                name: user ? user.name : formData.name,
-                customQuestionsJson: customQuestionsJson
+                stockImageId: images.length > 0 ? null : (selectedStockImageId || null),
+                category: stockCategory || null,
+                imageUrl: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
+                image_url: (images.length === 0 && mode === 'lost') ? stockImageUrl : null,
+                phone: user.phone || user.phone_number || "",
+                name: user.name || user.full_name || "Người dùng",
+                customQuestionsJson: customQuestionsJson,
+                tags: selectedTags
             };
             setNotification({ message: 'Đang tiến hành đăng tin...', type: 'info' });
             const result = mode === 'found'
@@ -390,10 +551,16 @@ export default function CreatePost() {
             }
         } catch (error) {
             console.error("Lỗi khi đăng tin:", error);
-            setNotification({ message: 'Đăng tin thất bại. Vui lòng kiểm tra lại kết nối hoặc dữ liệu!', type: 'error' });
+            const backendMessage =
+                error?.response?.data?.message ||
+                error?.data?.message ||
+                error?.message ||
+                'Đăng tin thất bại. Vui lòng kiểm tra lại kết nối hoặc dữ liệu!';
+
+            setNotification({ message: backendMessage, type: 'error' });
             setTimeout(() => {
                 setNotification(null);
-            }, 4000);
+            }, 6000);
         }
     };
 
@@ -404,10 +571,10 @@ export default function CreatePost() {
         <div className="fixed top-24 right-6 z-[9999] transition-all duration-300 animate-bounce">
           <div className={`flex items-center gap-3 px-6 py-3.5 rounded-xl shadow-lg border ${
             notification.type === 'success' 
-              ? 'bg-green-50 border-green-200 text-green-800' 
+              ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-500/15 dark:border-green-500/30 dark:text-green-300'
               : notification.type === 'error'
-              ? 'bg-red-50 border-red-200 text-red-800'
-              : 'bg-blue-50 border-blue-200 text-blue-800'
+              ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-500/15 dark:border-red-500/30 dark:text-red-300'
+              : 'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/15 dark:border-blue-500/30 dark:text-blue-300'
           }`}>
             {notification.type === 'success' && <CheckCircle size={20} className="text-green-600" />}
             {notification.type === 'error' && <AlertCircle size={20} className="text-red-600" />}
@@ -438,7 +605,7 @@ export default function CreatePost() {
             }`}
           >
             <AlertCircle size={20} />
-            Báo mất đồ
+            Người mất
           </button>
           <button
             onClick={() => setMode('found')}
@@ -449,7 +616,7 @@ export default function CreatePost() {
             }`}
           >
             <CheckCircle size={20} />
-            Báo tìm thấy đồ
+            Người nhặt
           </button>
         </div>
 
@@ -513,6 +680,61 @@ export default function CreatePost() {
                 )}
               </div>
 
+              {/* Category / Stock Image Selection */}
+              <div className="space-y-2">
+                <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
+                  <span>
+                    Danh mục đồ vật <span className="text-red-500">*</span>
+                  </span>
+                  {selectedStockImageId && (
+                    <span className="text-xs text-primary normal-case font-semibold">Đã chọn 1 danh mục</span>
+                  )}
+                </label>
+                {isLoadingStockImages ? (
+                  <div className="py-6 text-center text-sm text-on-surface-variant animate-pulse">
+                    Đang tải danh mục đồ vật...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {stockImagesList.map((item) => {
+                      const isSelected = selectedStockImageId === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedStockImageId(isSelected ? null : item.id)}
+                          className={`p-3.5 rounded-xl border flex flex-col items-center justify-center gap-2.5 transition-all cursor-pointer text-center relative ${
+                            isSelected
+                              ? 'border-2 border-primary bg-primary/8 shadow-md text-primary font-bold scale-[1.02]'
+                              : 'border-outline-variant/60 bg-surface hover:bg-surface-container-low text-on-surface hover:border-outline'
+                          }`}
+                        >
+                          {item.image_url ? (
+                            <img
+                              src={item.image_url}
+                              alt={item.label}
+                              className="w-12 h-12 object-contain"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-on-surface-variant font-bold text-lg">
+                              📦
+                            </div>
+                          )}
+                          <span className="text-[12.5px] leading-tight font-semibold">
+                            {item.label}
+                          </span>
+                          {isSelected && (
+                            <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
@@ -539,6 +761,47 @@ export default function CreatePost() {
                   placeholder="Mô tả đặc điểm nhận dạng, nhãn hiệu, các giấy tờ bên trong..."
                   rows="4"
                 />
+              </div>
+
+              {/* Tags Selection Block */}
+              <div className="space-y-1">
+                <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block">
+                  Thẻ từ khóa (Tags) <span className="text-red-500">*</span>
+                </label>
+
+                {/* Selected Tags list & input */}
+                <div className="w-full px-3.5 py-2.5 rounded-lg border border-outline-variant bg-surface transition-all focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 flex flex-wrap items-center gap-2 min-h-[50px]">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20 hover:bg-primary/15 transition-all"
+                    >
+                      <span className="text-primary/70 font-semibold">#</span>{tag}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="text-primary/60 hover:text-primary hover:bg-primary/20 rounded-full w-4 h-4 inline-flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  <input
+                    type="text"
+                    value={customTagInput}
+                    onChange={(e) => setCustomTagInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        handleAddCustomTag();
+                      }
+                    }}
+                    onBlur={handleAddCustomTag}
+                    placeholder={selectedTags.length === 0 ? "Nhập tag (ví dụ: ví, cccd, bằng lái...) và nhấn Enter" : "Nhập thêm tag..."}
+                    className="flex-1 min-w-[200px] bg-transparent font-body-lg text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none py-1"
+                  />
+                </div>
               </div>
 
               {/* Grid for Location & Time */}
@@ -596,118 +859,56 @@ export default function CreatePost() {
 
                 {/* Time */}
                 <div className="space-y-1 md:col-span-2">
-                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                    Thời gian
+                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block">
+                    {mode === 'lost' ? 'Thời gian mất đồ' : 'Thời gian nhặt được'}
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="dateTime"
-                    value={formData.dateTime}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                  />
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      readOnly
+                      value={formatDDMMYYYY(formData.dateTime)}
+                      placeholder="dd/mm/yyyy --:--"
+                      onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
+                      className="w-full px-4 py-3 pr-12 rounded-lg border border-outline-variant bg-surface font-body-lg cursor-pointer transition-all focus:border-primary focus:ring-2 focus:ring-primary/10 select-none text-on-surface font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => datePickerRef.current?.showPicker ? datePickerRef.current.showPicker() : datePickerRef.current?.click()}
+                      className="absolute right-3 text-on-surface-variant hover:text-primary transition-colors p-1"
+                    >
+                      <span className="material-symbols-outlined text-[22px]">calendar_month</span>
+                    </button>
+                    <input
+                      ref={datePickerRef}
+                      type="datetime-local"
+                      name="dateTime"
+                      value={formData.dateTime}
+                      max={getServerNowLocalISO()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          setFormData(prev => ({ ...prev, dateTime: '' }));
+                          return;
+                        }
+                        const selectedDate = new Date(val);
+                        const serverNow = new Date(Date.now() + serverOffsetMs);
+                        if (selectedDate > serverNow) {
+                          setNotification({ message: 'Thời gian chọn không thể vượt quá thời gian hiện tại của máy chủ!', type: 'error' });
+                          setTimeout(() => setNotification(null), 3000);
+                          setFormData(prev => ({ ...prev, dateTime: getServerNowLocalISO() }));
+                        } else {
+                          setFormData(prev => ({ ...prev, dateTime: val }));
+                        }
+                      }}
+                      className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Remind logged-in user in Lost mode about public contact info */}
-              {mode === 'lost' && user && (
-                <div className="mt-4 flex items-start gap-3 p-4 bg-primary/5 rounded-xl border border-primary/10">
-                  <Info size={20} className="text-primary flex-shrink-0 mt-0.5" />
-                  <p className="font-body-sm text-on-surface">
-                    Thông tin số điện thoại của bạn sẽ được công khai để người nhặt có thể liên hệ.
-                  </p>
-                </div>
-              )}
 
-              {/* Contact Information Section */}
-              {(!user || mode === 'found') && (
-                <div className="pt-6 border-t border-outline-variant/30 mt-6">
-                  <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider block mb-4">
-                    Thông tin liên hệ
-                  </label>
 
-                  {/* Lost Mode Contact Info */}
-                  {mode === 'lost' && !user && (
-                    <div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1">
-                          <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                            Họ và tên
-                          </label>
-                          <input
-                            type="text"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                            placeholder="Ví dụ: Nguyễn Văn A"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">
-                            Số điện thoại <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                            className="w-full px-4 py-3 rounded-lg border border-outline-variant bg-surface font-body-lg transition-all focus:border-primary focus:ring-2 focus:ring-primary/10"
-                            placeholder="Ví dụ: 090xxxxxxx"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="mt-4 flex items-start gap-3">
-                        <Info size={20} className="text-secondary flex-shrink-0 mt-0.5" />
-                        <p className="font-body-sm text-on-secondary-fixed-variant">
-                          Thông tin số điện thoại của bạn sẽ được công khai để người nhặt có thể liên hệ.
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
-                  {/* Found Mode Contact Info */}
-                  {mode === 'found' && (
-                    <div className="space-y-3">
-                      <div className="flex flex-col gap-3">
-                        <label className="flex items-center gap-3 p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer hover:border-primary transition-all">
-                          <input
-                            type="radio"
-                            name="visibility"
-                            value="public"
-                            checked={formData.visibility === 'public'}
-                            onChange={handleInputChange}
-                            className="w-5 h-5 text-primary"
-                          />
-                          <div>
-                            <span className="font-body-lg font-bold block">Công khai</span>
-                            <p className="font-body-sm text-on-surface-variant">
-                              Ai cũng có thể thấy thông tin liên hệ của bạn.
-                            </p>
-                          </div>
-                        </label>
-                        <label className="flex items-center gap-3 p-4 rounded-xl border border-outline-variant bg-surface cursor-pointer hover:border-primary transition-all">
-                          <input
-                            type="radio"
-                            name="visibility"
-                            value="match"
-                            checked={formData.visibility === 'match'}
-                            onChange={handleInputChange}
-                            className="w-5 h-5 text-primary"
-                          />
-                          <div>
-                            <span className="font-body-lg font-bold block">Công khai khi có người xác nhận (Match)</span>
-                            <p className="font-body-sm text-on-surface-variant">
-                              Chỉ hiển thị thông tin khi bạn xác nhận yêu cầu nhận lại đồ là chính xác.
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Inline verification questions for WHEN_MATCH */}
               {mode === 'found' && formData.visibility === 'match' && (
@@ -942,7 +1143,7 @@ export default function CreatePost() {
                 return (
                   <div key={match.post_id} className="bg-surface-container rounded-xl overflow-hidden border border-outline-variant flex flex-row shadow-sm h-28">
                     {/* Left: Image (Wider width) */}
-                    <div className="w-[35%] shrink-0 h-full relative bg-slate-100">
+                    <div className="w-[35%] shrink-0 h-full relative bg-surface-container">
                       <img
                         src={imgUrl}
                         alt={title}
