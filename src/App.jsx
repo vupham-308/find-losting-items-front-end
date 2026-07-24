@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom"
 import Header from "./components/layout/Header.jsx"
 import Footer from "./components/layout/Footer.jsx"
 import AppRoutes from "./routes/AppRoutes.jsx"
+import ChatDockContainer from "./components/chat/ChatDockContainer.jsx"
 
 // Những trang hiển thị toàn màn hình, không có Header/Footer
 const BARE_ROUTES = ["/login", "/register", "/forgot-password"]
@@ -15,6 +16,7 @@ export default function App() {
             {!hideChrome && <Header />}
             <AppRoutes />
             {!hideChrome && <Footer />}
+            {!hideChrome && <ChatDockContainer />}
         </div>
     )
 }

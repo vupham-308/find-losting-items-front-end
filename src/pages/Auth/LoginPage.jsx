@@ -7,7 +7,7 @@ import GoogleLoginButton from "../../components/auth/GoogleLoginButton.jsx"
 
 export default function LoginPage() {
     const navigate = useNavigate()
-    const { login, logout } = useAuth()
+    const { login } = useAuth()
     const [mail, setMail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
@@ -169,16 +169,14 @@ export default function LoginPage() {
             {/* ===== Cột phải: form đăng nhập ===== */}
             <main className="flex-1 flex items-center justify-center p-gutter-mobile sm:p-8 relative">
 
-                {/* Nút quay về trang chủ — ẩn khi bắt buộc thiết lập mật khẩu */}
-                {!needSetup && (
-                    <Link
-                        to="/"
-                        className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-                        Trang chủ
-                    </Link>
-                )}
+                {/* Nút quay về trang chủ */}
+                <Link
+                    to="/"
+                    className="absolute top-6 left-6 inline-flex items-center gap-1 px-3 py-2 rounded-full text-on-surface-variant hover:text-primary hover:bg-surface-container-low text-[14px] font-medium transition-colors"
+                >
+                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                    Trang chủ
+                </Link>
 
                 <div className="w-full max-w-md">
 
@@ -215,8 +213,8 @@ export default function LoginPage() {
                                 )}
 
                                 {/* Mật khẩu mới */}
-                                <div className="space-y-stack-sm">
-                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupNewPassword">Mật khẩu mới</label>
+                                <div>
+                                    <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="setupNewPassword">Mật khẩu mới</label>
                                     <div className="relative flex items-center">
                                         <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
                                         <input
@@ -231,21 +229,11 @@ export default function LoginPage() {
                                             <span className="material-symbols-outlined text-[20px]">{showNewPassword ? "visibility_off" : "visibility"}</span>
                                         </button>
                                     </div>
-                                    <ul className="space-y-1 pt-1">
-                                        {passwordChecks.map((rule) => (
-                                            <li key={rule.label} className={`text-[12px] flex items-center gap-1 transition-colors ${rule.valid ? "text-primary" : "text-on-surface-variant"}`}>
-                                                <span className="material-symbols-outlined text-[14px]">
-                                                    {rule.valid ? "check_circle" : "radio_button_unchecked"}
-                                                </span>
-                                                {rule.label}
-                                            </li>
-                                        ))}
-                                    </ul>
                                 </div>
 
                                 {/* Xác nhận mật khẩu */}
-                                <div className="space-y-stack-sm">
-                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="setupConfirmPassword">Xác nhận mật khẩu</label>
+                                <div>
+                                    <label className="block mb-2 text-on-surface text-[13px] font-semibold" htmlFor="setupConfirmPassword">Xác nhận mật khẩu</label>
                                     <div className="relative flex items-center">
                                         <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock_reset</span>
                                         <input
@@ -255,10 +243,10 @@ export default function LoginPage() {
                                             onChange={(e) => setConfirmPassword(e.target.value)}
                                             placeholder="Nhập lại mật khẩu mới"
                                             className={`w-full pl-12 pr-12 py-3.5 bg-surface-container-low border rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 transition-all text-on-surface text-[15px] outline-none ${confirmPassword.length > 0
-                                                    ? isConfirmMatch
-                                                        ? "border-primary focus:border-primary"
-                                                        : "border-error focus:border-error"
-                                                    : "border-outline-variant focus:border-primary"
+                                                ? isConfirmMatch
+                                                    ? "border-green-500 focus:border-green-500"
+                                                    : "border-error focus:border-error"
+                                                : "border-outline-variant focus:border-primary"
                                                 }`}
                                         />
                                         <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors">
@@ -269,6 +257,18 @@ export default function LoginPage() {
                                         <p className="text-error text-[12px] mt-1 px-1">Mật khẩu xác nhận không khớp</p>
                                     )}
                                 </div>
+
+                                {/* Yêu cầu mật khẩu — đặt dưới ô xác nhận, mỗi mục đạt sẽ chuyển xanh lá */}
+                                <ul className="space-y-1.5">
+                                    {passwordChecks.map((rule) => (
+                                        <li key={rule.label} className={`text-[12px] flex items-center gap-1.5 transition-colors ${rule.valid ? "text-green-600" : "text-on-surface-variant"}`}>
+                                            <span className="material-symbols-outlined text-[14px]">
+                                                {rule.valid ? "check_circle" : "radio_button_unchecked"}
+                                            </span>
+                                            {rule.label}
+                                        </li>
+                                    ))}
+                                </ul>
 
                                 {/* Submit */}
                                 <button
@@ -294,106 +294,114 @@ export default function LoginPage() {
                             </form>
                         </>
                     ) : (
-                    <>
-                    {/* Tiêu đề */}
-                    <div className="mb-stack-lg">
-                        <h1 className="text-on-surface text-[28px] font-bold tracking-tight">Đăng nhập</h1>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-stack-md">
-
-                        {/* Error */}
-                        {error && (
-                            <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-xl text-[14px]">
-                                <span className="material-symbols-outlined text-[18px]">error</span>
-                                {error}
+                        <>
+                            {/* Tiêu đề */}
+                            <div className="mb-stack-lg">
+                                <h1 className="text-on-surface text-[28px] font-bold tracking-tight">Đăng nhập</h1>
                             </div>
-                        )}
 
-                        {/* Email */}
-                        <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="mail">
-                                Email
-                            </label>
-                            <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">mail</span>
-                                <input
-                                    id="mail"
-                                    type="email"
-                                    value={mail}
-                                    onChange={(e) => setMail(e.target.value)}
-                                    placeholder="email@example.com"
-                                    className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
-                                />
-                            </div>
-                        </div>
+                            <form onSubmit={handleSubmit} className="space-y-stack-md">
 
-                        {/* Password */}
-                        <div className="space-y-stack-sm">
-                            <label className="text-on-surface text-[13px] font-semibold" htmlFor="password">
-                                Mật khẩu
-                            </label>
-                            <div className="relative flex items-center">
-                                <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
-                                <input
-                                    id="password"
-                                    type={showPassword ? "text" : "password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Nhập mật khẩu của bạn"
-                                    className="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
-                                />
+                                {/* Error */}
+                                {error && (
+                                    <div className="flex items-center gap-2 px-4 py-3 bg-error-container text-on-error-container rounded-xl text-[14px]">
+                                        <span className="material-symbols-outlined text-[18px]">error</span>
+                                        {error}
+                                    </div>
+                                )}
 
+                                {/* Email */}
+                                <div className="space-y-stack-sm">
+                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="mail">
+                                        Email
+                                    </label>
+                                    <div className="relative flex items-center">
+                                        <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">mail</span>
+                                        <input
+                                            id="mail"
+                                            type="email"
+                                            value={mail}
+                                            onChange={(e) => setMail(e.target.value)}
+                                            placeholder="email@example.com"
+                                            className="w-full pl-12 pr-4 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Password */}
+                                <div className="space-y-stack-sm">
+                                    <label className="text-on-surface text-[13px] font-semibold" htmlFor="password">
+                                        Mật khẩu
+                                    </label>
+                                    <div className="relative flex items-center">
+                                        <span className="material-symbols-outlined absolute left-4 text-outline text-[20px]">lock</span>
+                                        <input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="Nhập mật khẩu của bạn"
+                                            className="w-full pl-12 pr-12 py-3.5 bg-surface-container-low border border-outline-variant rounded-xl focus:bg-surface-container-lowest focus:ring-4 focus:ring-primary/15 focus:border-primary transition-all text-on-surface text-[15px] outline-none"
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors"
+                                            aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                                        >
+                                            <span className="material-symbols-outlined text-[20px]">
+                                                {showPassword ? "visibility_off" : "visibility"}
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Quên mật khẩu */}
+                                <div className="flex justify-end">
+                                    <Link to="/forgot-password" className="text-primary text-[13px] font-semibold hover:underline">
+                                        Quên mật khẩu?
+                                    </Link>
+                                </div>
+
+                                {/* Submit */}
                                 <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors"
-                                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full bg-primary text-on-primary py-3.5 rounded-xl text-[16px] font-semibold hover:bg-primary-container active:scale-[0.99] transition-all flex justify-center items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
                                 >
-                                    <span className="material-symbols-outlined text-[20px]">
-                                        {showPassword ? "visibility_off" : "visibility"}
-                                    </span>
+                                    {loading ? (
+                                        <>
+                                            <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
+                                            Đang đăng nhập...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Đăng nhập
+                                            <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                                        </>
+                                    )}
                                 </button>
-                            </div>
-                        </div>
 
-                        {/* Quên mật khẩu */}
-                        <div className="flex justify-end">
-                            <Link to="/forgot-password" className="text-primary text-[13px] font-semibold hover:underline">
-                                Quên mật khẩu?
-                            </Link>
-                        </div>
+                                {/* Divider */}
+                                <div className="flex items-center gap-4 py-1">
+                                    <div className="h-px flex-grow bg-outline-variant" />
+                                    <span className="text-outline text-[12px] font-medium">hoặc tiếp tục với</span>
+                                    <div className="h-px flex-grow bg-outline-variant" />
+                                </div>
 
-                        {/* Submit */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-primary text-on-primary py-3.5 rounded-xl text-[16px] font-semibold hover:bg-primary-container active:scale-[0.99] transition-all flex justify-center items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none"
-                        >
-                            {loading ? (
-                                <>
-                                    <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span>
-                                    Đang đăng nhập...
-                                </>
-                            ) : (
-                                <>
-                                    Đăng nhập
-                                    <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
-                                </>
-                            )}
-                        </button>
+                                {/* Google */}
+                                <GoogleLoginButton onError={setError} />
+                            </form>
 
-                        {/* Divider */}
-                        <div className="flex items-center gap-4 py-1">
-                            <div className="h-px flex-grow bg-outline-variant" />
-                            <span className="text-outline text-[12px] font-medium">hoặc tiếp tục với</span>
-                            <div className="h-px flex-grow bg-outline-variant" />
-                        </div>
-
-                        {/* Google */}
-                        <GoogleLoginButton onError={setError} />
-                    </form>
-                    </>
+                            {/* Đăng ký */}
+                            <p className="mt-stack-lg text-center text-on-surface-variant text-[14px]">
+                                Chưa có tài khoản?{" "}
+                                <Link to="/register" className="text-primary font-semibold hover:underline">
+                                    Đăng ký ngay
+                                </Link>
+                            </p>
+                        </>
                     )}
                 </div>
             </main>

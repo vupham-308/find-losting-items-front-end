@@ -32,10 +32,7 @@ export default function PrivacyPolicy() {
                 <strong>Thông tin cá nhân cơ bản:</strong> Khi đăng ký tài khoản hoặc đăng tin, chúng tôi có thể thu thập Họ và tên, Email, Số điện thoại và hình ảnh đại diện (nếu có).
               </li>
               <li>
-                <strong>Thông tin tin đăng:</strong> Hình ảnh đồ vật, mô tả chi tiết, khu vực Quận/Huyện, Phường/Xã và tọa độ địa lý (Kinh độ/Vĩ độ) nơi thất lạc hoặc tìm thấy vật phẩm.
-              </li>
-              <li>
-                <strong>Dữ liệu thiết bị & IP:</strong> Thông tin trình duyệt và hệ điều hành phục vụ việc tối ưu hóa giao diện.
+                <strong>Thông tin tin đăng:</strong> Hình ảnh đồ vật, mô tả chi tiết, khu vực Quận/Huyện, Phường/Xã nơi thất lạc hoặc tìm thấy vật phẩm.
               </li>
             </ul>
           </section>
@@ -61,14 +58,14 @@ export default function PrivacyPolicy() {
               3. Quyền kiểm soát hiển thị thông tin liên hệ
             </h2>
             <p className="text-sm">
-              Chúng tôi cung cấp tùy chọn quyền riêng tư linh hoạt khi bạn báo tìm thấy đồ (Found):
+              Chúng tôi cung cấp quyền riêng tư:
             </p>
             <ul className="list-disc pl-5 text-sm space-y-2">
               <li>
-                <strong>Công khai (Public):</strong> Số điện thoại và thông tin liên hệ của bạn hiển thị công khai trên bài đăng để mọi người chủ động liên hệ.
+                <strong>Báo mất đồ:</strong> Mọi người có thể yêu cầu nhắn tin với bạn và bạn sẽ chỉ nhận được tin nhắn khi bạn chấp nhận yêu cầu đó.
               </li>
               <li>
-                <strong>Công khai khi có người xác nhận (Match / WHEN_MATCH):</strong> Số điện thoại của bạn sẽ hoàn toàn được ẩn đi. Thông tin liên hệ chỉ hiển thị với người báo mất sau khi họ trả lời đúng câu hỏi xác minh và được bạn phê duyệt xác nhận khớp (Match).
+                <strong>Tìm thấy đồ:</strong> Chỉ có thể nhắn tin khi người mất trả lời đúng câu hỏi xác minh.
               </li>
             </ul>
           </section>
@@ -80,7 +77,7 @@ export default function PrivacyPolicy() {
               4. Chia sẻ thông tin với bên thứ ba
             </h2>
             <p className="text-sm">
-              Sài Gòn Tìm Đồ cam kết <strong>không bán, trao đổi hoặc thương mại hóa</strong> thông tin cá nhân của bạn cho bất kỳ bên thứ ba nào. Chúng tôi chỉ chia sẻ dữ liệu không định danh (như tọa độ bản đồ) với các dịch vụ bản đồ nguồn mở (như OpenStreetMap Nominatim) để phục vụ tính năng tìm kiếm vị trí.
+              Sài Gòn Tìm Đồ cam kết <strong>không bán, trao đổi hoặc thương mại hóa</strong> thông tin cá nhân của bạn cho bất kỳ bên thứ ba nào.
             </p>
           </section>
 
@@ -91,7 +88,7 @@ export default function PrivacyPolicy() {
               5. Quyền của bạn đối với dữ liệu
             </h2>
             <p className="text-sm">
-              Bạn có toàn quyền chỉnh sửa thông tin cá nhân, cập nhật tin đăng hoặc xóa vĩnh viễn tin đăng của mình khỏi hệ thống thông qua trang cá nhân hoặc bằng cách gửi yêu cầu trực tiếp đến ban quản trị.
+              Bạn có toàn quyền chỉnh sửa thông tin cá nhân, cập nhật tin đăng hoặc xóa tin đăng của mình khỏi hệ thống thông qua trang cá nhân.
             </p>
           </section>
 

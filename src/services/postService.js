@@ -19,6 +19,19 @@ function buildPostFormData(postData) {
     if (postData.longitude) formData.append("longitude", postData.longitude);
     if (postData.locationLevel !== undefined) formData.append("locationLevel", postData.locationLevel);
 
+    if (postData.stockImageId) {
+        formData.append("stockImageId", postData.stockImageId);
+    }
+    if (postData.category) {
+        formData.append("category", postData.category);
+    }
+    if (postData.imageUrl) {
+        formData.append("imageUrl", postData.imageUrl);
+    }
+    if (postData.image_url) {
+        formData.append("image_url", postData.image_url);
+    }
+
     if (postData.image) {
         formData.append("image", postData.image);
     }
@@ -27,7 +40,15 @@ function buildPostFormData(postData) {
         formData.append("customQuestionsJson", postData.customQuestionsJson);
     }
 
+    if (Array.isArray(postData.tags) && postData.tags.length > 0) {
+        postData.tags.forEach(t => formData.append("tags", t));
+    }
+
     return formData;
+}
+
+export function getStockImages() {
+    return axiosClient.get(POST_ENDPOINTS.stockImages);
 }
 
 export function createLostPost(postData) {
@@ -103,4 +124,8 @@ export function updatePostStatus(id, status) {
 
 export function deletePost(id) {
     return axiosClient.delete(`${POST_ENDPOINTS.detail}/${id}`);
+}
+
+export function filterPosts(params) {
+    return axiosClient.get(POST_ENDPOINTS.filter, { params });
 }

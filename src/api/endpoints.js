@@ -18,8 +18,10 @@ export const POST_ENDPOINTS = {
     suggestQuestions: "/api/v1/posts/suggest-questions",
     generateDescription: "/api/v1/posts/generate-description",
     all: "/api/v1/posts/all",
+    filter: "/api/v1/posts/filter",
     searchText: "/api/v1/posts/search/text",
     searchImage: "/api/v1/posts/search",
     detail: "/api/v1/posts",
     myPosts: "/api/v1/posts/my-posts",
+    stockImages: "/api/v1/stock-images",
 }

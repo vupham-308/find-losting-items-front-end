@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom"
 import {
-    LayoutDashboard, Users, FileText, Settings, ChevronLeft,
-    ChevronRight, Bell, LogOut, Shield
+    LayoutDashboard, Users, FileText, Image, Settings, ChevronLeft,
+    ChevronRight, Bell, LogOut, Shield, Moon, Sun
 } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
 import { useAuth } from "../../hooks/useAuth.js"
+import { useThemeStore } from "../../stores/themeStore.js"
 
 const navSections = [
     {
@@ -18,6 +19,7 @@ const navSections = [
         items: [
             { to: "/admin/users", icon: Users, text: "Quản lý người dùng" },
             { to: "/admin/posts", icon: FileText, text: "Quản lý bài đăng" },
+            { to: "/admin/stock-images", icon: Image, text: "Quản lý ảnh mặc định" },
         ],
     },
     {
@@ -40,6 +42,9 @@ export default function AdminLayout() {
         await logout()
         navigate("/login")
     }
+
+    const { theme, toggleTheme } = useThemeStore()
+    const isDark = theme === "dark"
 
     return (
         <div className="admin-layout">
@@ -91,6 +96,14 @@ export default function AdminLayout() {
                         <div className="sidebar-profile-name">{user?.name || "Admin"}</div>
                         <div className="sidebar-profile-role">{user?.userType || "ADMIN"}</div>
                     </div>
+                    <button
+                        className="sidebar-theme-toggle"
+                        onClick={toggleTheme}
+                        title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+                        aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+                    >
+                        {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
                     <button
                         className="sidebar-logout"
                         onClick={handleLogout}

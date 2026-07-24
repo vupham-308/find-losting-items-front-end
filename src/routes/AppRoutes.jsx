@@ -8,7 +8,6 @@ import ItemDetailPage from "../pages/Items/ItemDetailPage.jsx"
 import ProfilePage from "../pages/Auth/Profile.jsx"
 import TermsOfServicePage from "../pages/Home/TermsOfService.jsx"
 import PrivacyPolicyPage from "../pages/Home/PrivacyPolicy.jsx"
-import SearchImagePage from "../pages/Home/SearchImage.jsx"
 
 // Guards
 import RequirePassword from "../components/auth/RequirePassword.jsx"
@@ -19,6 +18,7 @@ import AdminLayout from "../pages/Admin/AdminLayout.jsx"
 import DashboardPage from "../pages/Admin/DashboardPage.jsx"
 import UserManagementPage from "../pages/Admin/UserManagementPage.jsx"
 import PostManagementPage from "../pages/Admin/PostManagementPage.jsx"
+import StockImageManagementPage from "../pages/Admin/StockImageManagementPage.jsx"
 import SystemPage from "../pages/Admin/SystemPage.jsx"
 
 export default function AppRoutes() {
@@ -36,7 +36,6 @@ export default function AppRoutes() {
             <Route path="/create-post" element={<RequirePassword><CreateItemPage /></RequirePassword>} />
             <Route path="/posts/:id" element={<RequirePassword><ItemDetailPage /></RequirePassword>} />
             <Route path="/profile" element={<RequirePassword><ProfilePage /></RequirePassword>} />
-            <Route path="/search-image" element={<RequirePassword><SearchImagePage /></RequirePassword>} />
 
             {/* Admin Dashboard */}
             <Route
@@ -52,6 +51,7 @@ export default function AppRoutes() {
                 <Route index element={<DashboardPage />} />
                 <Route path="users" element={<UserManagementPage />} />
                 <Route path="posts" element={<PostManagementPage />} />
+                <Route path="stock-images" element={<StockImageManagementPage />} />
                 <Route path="system" element={<SystemPage />} />
             </Route>
         </Routes>

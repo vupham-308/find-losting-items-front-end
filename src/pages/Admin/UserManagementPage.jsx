@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react"
-import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle } from "lucide-react"
+import { Search, RefreshCw, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, User, AlertTriangle, ShieldCheck, ShieldOff, Check, Filter, ChevronDown, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw } from "lucide-react"
 import useAdminStore from "../../stores/adminStore.js"
-import { getUserById, updateUser, deleteUser } from "../../services/adminService.js"
+import { useAuth } from "../../hooks/useAuth.js"
+import { getUserById, updateUser, deleteUser, changeUserRole, USER_ROLES, USER_SORT_FIELDS } from "../../services/adminService.js"
 
 // Palette cho avatar
 const AVATAR_COLORS = [
@@ -13,6 +14,25 @@ function getAvatarColor(id) {
     return AVATAR_COLORS[(id ?? 0) % AVATAR_COLORS.length]
 }
 
+// Huy hiệu có/không dùng chung cho cột Google và Mật khẩu.
+function BoolBadge({ value, title }) {
+    return (
+        <span className={`badge-bool ${value ? "yes" : "no"}`} title={title}>
+            {value ? <Check size={13} strokeWidth={3.5} /> : <X size={13} strokeWidth={3.5} />}
+        </span>
+    )
+}
+
+// Mũi tên chỉ hướng sắp xếp trên tiêu đề cột.
+function SortIcon({ field, sortBy, sortDir }) {
+    if (sortBy !== field) return <ArrowUpDown size={12} className="sort-icon" />
+    return sortDir === "asc" ? (
+        <ArrowUp size={12} className="sort-icon active" />
+    ) : (
+        <ArrowDown size={12} className="sort-icon active" />
+    )
+}
+
 export default function UserManagementPage() {
     const {
         users,
@@ -20,9 +40,18 @@ export default function UserManagementPage() {
         usersError,
         usersPagination,
         usersSearch,
+        usersRole,
+        usersSortBy,
+        usersSortDir,
         setUsersSearch,
+        setUsersRole,
+        setUsersSort,
         fetchUsers,
     } = useAdminStore()
+
+    const { user: currentUser } = useAuth()
+    // Backend chặn admin tự đổi vai trò của chính mình ⇒ khoá nút ở phía client luôn.
+    const currentUserId = currentUser ? String(currentUser.userId ?? currentUser.id) : null
 
     const [searchInput, setSearchInput] = useState(usersSearch)
 
@@ -36,6 +65,11 @@ export default function UserManagementPage() {
     const [editForm, setEditForm] = useState({ name: "", phone: "" })
     const [editSaving, setEditSaving] = useState(false)
     const [editError, setEditError] = useState(null)
+
+    // Đổi vai trò người dùng
+    const [roleTarget, setRoleTarget] = useState(null)
+    const [roleSaving, setRoleSaving] = useState(false)
+    const [roleError, setRoleError] = useState(null)
 
     // Xoá người dùng
     const [deleteTarget, setDeleteTarget] = useState(null)
@@ -62,6 +96,40 @@ export default function UserManagementPage() {
         (p) => fetchUsers({ page: p }),
         [fetchUsers]
     )
+
+    // Đổi bộ lọc / sắp xếp → luôn quay về trang đầu, tránh rơi vào trang trống.
+    const handleRoleChange = (role) => {
+        setUsersRole(role)
+        fetchUsers({ page: 0, role })
+    }
+
+    const handleSortByChange = (sortBy) => {
+        setUsersSort(sortBy, usersSortDir)
+        fetchUsers({ page: 0, sortBy })
+    }
+
+    const toggleSortDir = () => {
+        const sortDir = usersSortDir === "asc" ? "desc" : "asc"
+        setUsersSort(usersSortBy, sortDir)
+        fetchUsers({ page: 0, sortDir })
+    }
+
+    // Bấm vào tiêu đề cột: cùng cột thì đảo chiều, khác cột thì sắp xếp tăng dần.
+    const handleSortColumn = (field) => {
+        const sortDir = usersSortBy === field && usersSortDir === "asc" ? "desc" : "asc"
+        setUsersSort(field, sortDir)
+        fetchUsers({ page: 0, sortBy: field, sortDir })
+    }
+
+    const hasFilters = usersRole || usersSortBy !== "id" || usersSortDir !== "asc" || usersSearch
+
+    const handleResetFilters = () => {
+        setSearchInput("")
+        setUsersSearch("")
+        setUsersRole("")
+        setUsersSort("id", "asc")
+        fetchUsers({ page: 0, search: "", role: "", sortBy: "id", sortDir: "asc" })
+    }
 
     // Gọi API xem chi tiết
     const handleViewDetail = async (userId) => {
@@ -120,6 +188,35 @@ export default function UserManagementPage() {
         }
     }
 
+    // Mở modal xác nhận đổi vai trò
+    const openRoleChange = (u) => {
+        setRoleError(null)
+        setRoleTarget(u)
+    }
+
+    const closeRoleModal = () => {
+        if (roleSaving) return
+        setRoleTarget(null)
+        setRoleError(null)
+    }
+
+    // Xác nhận & thực hiện đổi vai trò
+    const handleConfirmRoleChange = async () => {
+        if (!roleTarget) return
+        const newRole = roleTarget.type === "ADMIN" ? "USER" : "ADMIN"
+        setRoleSaving(true)
+        setRoleError(null)
+        try {
+            await changeUserRole(roleTarget.id, newRole)
+            setRoleTarget(null)
+            await fetchUsers({ page: pageNumber })
+        } catch (err) {
+            setRoleError(err.message || "Không thể đổi vai trò người dùng")
+        } finally {
+            setRoleSaving(false)
+        }
+    }
+
     // Xác nhận & thực hiện xoá người dùng
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return
@@ -169,10 +266,72 @@ export default function UserManagementPage() {
                             onChange={(e) => setSearchInput(e.target.value)}
                         />
                     </div>
+
+                    {/* Lọc theo vai trò */}
+                    <div className="stock-filter-select">
+                        <Filter size={15} className="stock-filter-select-icon" />
+                        <select
+                            aria-label="Lọc theo vai trò"
+                            value={usersRole}
+                            onChange={(e) => handleRoleChange(e.target.value)}
+                        >
+                            <option value="">Tất cả vai trò</option>
+                            {USER_ROLES.map((r) => (
+                                <option key={r.value} value={r.value}>
+                                    {r.label}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={15} className="stock-filter-select-caret" />
+                    </div>
+
+                    {/* Sắp xếp: trường + chiều */}
+                    <div className="stock-filter-select">
+                        <ArrowUpDown size={15} className="stock-filter-select-icon" />
+                        <select
+                            aria-label="Sắp xếp theo"
+                            value={usersSortBy}
+                            onChange={(e) => handleSortByChange(e.target.value)}
+                        >
+                            {USER_SORT_FIELDS.map((f) => (
+                                <option key={f.value} value={f.value}>
+                                    {f.label}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={15} className="stock-filter-select-caret" />
+                    </div>
+
+                    <button
+                        className="filter-btn"
+                        onClick={toggleSortDir}
+                        title={
+                            usersSortDir === "asc"
+                                ? "Đang tăng dần — bấm để giảm dần"
+                                : "Đang giảm dần — bấm để tăng dần"
+                        }
+                    >
+                        {usersSortDir === "asc" ? (
+                            <ArrowUp size={14} />
+                        ) : (
+                            <ArrowDown size={14} />
+                        )}
+                        {usersSortDir === "asc" ? "Tăng dần" : "Giảm dần"}
+                    </button>
+
+                    {hasFilters && (
+                        <button
+                            className="filter-btn"
+                            onClick={handleResetFilters}
+                            title="Xoá bộ lọc"
+                        >
+                            <RotateCcw size={14} /> Đặt lại
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="admin-content">
+            <div className="admin-content list-page">
                 {/* Error */}
                 {usersError && (
                     <div className="admin-error">
@@ -181,7 +340,7 @@ export default function UserManagementPage() {
                 )}
 
                 {/* Card */}
-                <div className="admin-card">
+                <div className="admin-card full-bleed">
                     <div className="admin-card-header">
                         <div className="admin-card-title">
                             Danh sách người dùng
@@ -215,20 +374,36 @@ export default function UserManagementPage() {
                                 <table className="admin-table">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
-                                            <th>Người dùng</th>
+                                            {/* Các cột backend cho phép sắp xếp → bấm tiêu đề để đổi */}
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("id")}
+                                            >
+                                                ID <SortIcon field="id" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("name")}
+                                            >
+                                                Người dùng <SortIcon field="name" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
                                             <th>Số điện thoại</th>
                                             <th>Loại</th>
                                             <th>Google</th>
                                             <th>Mật khẩu</th>
-                                            <th>Ngày tạo</th>
+                                            <th
+                                                className="th-sortable"
+                                                onClick={() => handleSortColumn("createdAt")}
+                                            >
+                                                Ngày tạo <SortIcon field="createdAt" sortBy={usersSortBy} sortDir={usersSortDir} />
+                                            </th>
                                             <th>Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {users.map((u) => (
                                             <tr key={u.id}>
-                                                <td style={{ color: "#727785", fontWeight: 500 }}>
+                                                <td style={{ color: "var(--admin-text-muted)", fontWeight: 500 }}>
                                                     #{u.id}
                                                 </td>
                                                 <td>
@@ -262,22 +437,16 @@ export default function UserManagementPage() {
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        className={`badge-bool ${
-                                                            u.googleAccount ? "yes" : "no"
-                                                        }`}
-                                                    >
-                                                        {u.googleAccount ? "✓" : "✗"}
-                                                    </span>
+                                                    <BoolBadge
+                                                        value={u.googleAccount}
+                                                        title={u.googleAccount ? "Đã liên kết Google" : "Chưa liên kết Google"}
+                                                    />
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        className={`badge-bool ${
-                                                            u.hasPassword ? "yes" : "no"
-                                                        }`}
-                                                    >
-                                                        {u.hasPassword ? "✓" : "✗"}
-                                                    </span>
+                                                    <BoolBadge
+                                                        value={u.hasPassword}
+                                                        title={u.hasPassword ? "Đã thiết lập mật khẩu" : "Chưa thiết lập mật khẩu"}
+                                                    />
                                                 </td>
                                                 <td>
                                                     {u.createdAt
@@ -299,6 +468,26 @@ export default function UserManagementPage() {
                                                             onClick={() => openEdit(u)}
                                                         >
                                                             <Pencil size={14} />
+                                                        </button>
+                                                        <button
+                                                            className={`table-action-btn${
+                                                                u.type === "ADMIN" ? " warning" : ""
+                                                            }`}
+                                                            title={
+                                                                String(u.id) === currentUserId
+                                                                    ? "Không thể tự đổi vai trò của chính mình"
+                                                                    : u.type === "ADMIN"
+                                                                    ? "Hạ quyền xuống Người dùng"
+                                                                    : "Nâng quyền lên Admin"
+                                                            }
+                                                            disabled={String(u.id) === currentUserId}
+                                                            onClick={() => openRoleChange(u)}
+                                                        >
+                                                            {u.type === "ADMIN" ? (
+                                                                <ShieldOff size={14} />
+                                                            ) : (
+                                                                <ShieldCheck size={14} />
+                                                            )}
                                                         </button>
                                                         <button
                                                             className="table-action-btn danger"
@@ -352,7 +541,7 @@ export default function UserManagementPage() {
                                                     <span
                                                         key={item}
                                                         style={{
-                                                            color: "#727785",
+                                                            color: "var(--admin-text-muted)",
                                                             padding: "0 4px",
                                                             fontSize: 13,
                                                         }}
@@ -392,7 +581,7 @@ export default function UserManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <User size={18} color="#005bbf" />
+                                <User size={18} color="var(--admin-brand)" />
                                 Chi tiết người dùng
                             </h2>
                             <button className="admin-modal-close" onClick={closeDetail}>
@@ -461,21 +650,15 @@ export default function UserManagementPage() {
                                     </div>
                                     <div className="user-detail-item">
                                         <div className="user-detail-label">Tài khoản Google</div>
-                                        <div className="user-detail-value">
-                                            <span className={`badge-bool ${detailUser.googleAccount ? "yes" : "no"}`}>
-                                                {detailUser.googleAccount ? "✓" : "✗"}
-                                            </span>
-                                            {" "}
+                                        <div className="user-detail-value user-detail-value-inline">
+                                            <BoolBadge value={detailUser.googleAccount} />
                                             {detailUser.googleAccount ? "Đã liên kết" : "Chưa liên kết"}
                                         </div>
                                     </div>
                                     <div className="user-detail-item">
                                         <div className="user-detail-label">Mật khẩu</div>
-                                        <div className="user-detail-value">
-                                            <span className={`badge-bool ${detailUser.hasPassword ? "yes" : "no"}`}>
-                                                {detailUser.hasPassword ? "✓" : "✗"}
-                                            </span>
-                                            {" "}
+                                        <div className="user-detail-value user-detail-value-inline">
+                                            <BoolBadge value={detailUser.hasPassword} />
                                             {detailUser.hasPassword ? "Đã thiết lập" : "Chưa thiết lập"}
                                         </div>
                                     </div>
@@ -506,7 +689,7 @@ export default function UserManagementPage() {
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <Pencil size={18} color="#005bbf" />
+                                <Pencil size={18} color="var(--admin-brand)" />
                                 Sửa thông tin người dùng
                             </h2>
                             <button
@@ -591,13 +774,137 @@ export default function UserManagementPage() {
                 </div>
             )}
 
+            {/* ===== Modal xác nhận đổi vai trò ===== */}
+            {roleTarget && (
+                <div className="admin-modal-overlay" onClick={closeRoleModal}>
+                    <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="admin-modal-header">
+                            <h2>
+                                {roleTarget.type === "ADMIN" ? (
+                                    <ShieldOff size={18} color="var(--admin-warning)" />
+                                ) : (
+                                    <ShieldCheck size={18} color="var(--admin-brand)" />
+                                )}
+                                {roleTarget.type === "ADMIN" ? "Hạ quyền quản trị" : "Nâng quyền quản trị"}
+                            </h2>
+                            <button
+                                className="admin-modal-close"
+                                onClick={closeRoleModal}
+                                disabled={roleSaving}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="admin-modal-body">
+                            {/* Trước → sau */}
+                            <div className="user-detail-profile">
+                                <div
+                                    className="user-detail-avatar"
+                                    style={{ background: getAvatarColor(roleTarget.id) }}
+                                >
+                                    {(roleTarget.name || "?").charAt(0).toUpperCase()}
+                                </div>
+                                <div className="user-detail-profile-info">
+                                    <h3>{roleTarget.name}</h3>
+                                    <p>{roleTarget.mail}</p>
+                                </div>
+                            </div>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 14,
+                                    marginBottom: 20,
+                                }}
+                            >
+                                <span className={`badge-type ${roleTarget.type === "ADMIN" ? "admin" : "user"}`}>
+                                    {roleTarget.type === "ADMIN" ? "Admin" : "Người dùng"}
+                                </span>
+                                <ChevronRight size={18} color="var(--admin-text-muted)" />
+                                <span className={`badge-type ${roleTarget.type === "ADMIN" ? "user" : "admin"}`}>
+                                    {roleTarget.type === "ADMIN" ? "Người dùng" : "Admin"}
+                                </span>
+                            </div>
+
+                            <p style={{ margin: "0 0 12px", color: "#444", fontSize: 14, lineHeight: 1.6 }}>
+                                {roleTarget.type === "ADMIN" ? (
+                                    <>
+                                        Bạn có chắc muốn <strong>thu hồi quyền quản trị</strong> của{" "}
+                                        <strong>{roleTarget.name}</strong>? Người này sẽ mất toàn bộ quyền
+                                        truy cập trang quản trị.
+                                    </>
+                                ) : (
+                                    <>
+                                        Bạn có chắc muốn <strong>cấp quyền quản trị</strong> cho{" "}
+                                        <strong>{roleTarget.name}</strong>? Người này sẽ có toàn quyền quản lý
+                                        người dùng và bài đăng.
+                                    </>
+                                )}
+                            </p>
+
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: 8,
+                                    padding: "12px 14px",
+                                    borderRadius: 12,
+                                    background: "rgba(158, 67, 0, 0.06)",
+                                    border: "1px solid rgba(158, 67, 0, 0.15)",
+                                    color: "var(--admin-warning)",
+                                    fontSize: 12.5,
+                                    lineHeight: 1.6,
+                                    marginBottom: 16,
+                                }}
+                            >
+                                <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: 2 }} />
+                                <span>
+                                    Toàn bộ phiên đăng nhập của người dùng này sẽ bị thu hồi ngay lập tức —
+                                    họ cần đăng nhập lại.
+                                </span>
+                            </div>
+
+                            {roleError && (
+                                <div className="admin-error" style={{ marginBottom: 12 }}>
+                                    ⚠️ {roleError}
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                                <button
+                                    className="filter-btn"
+                                    onClick={closeRoleModal}
+                                    disabled={roleSaving}
+                                >
+                                    Huỷ
+                                </button>
+                                <button
+                                    className="filter-btn primary"
+                                    onClick={handleConfirmRoleChange}
+                                    disabled={roleSaving}
+                                >
+                                    {roleSaving
+                                        ? "Đang cập nhật..."
+                                        : roleTarget.type === "ADMIN"
+                                        ? "Hạ quyền"
+                                        : "Nâng quyền"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ===== Modal xác nhận xoá người dùng ===== */}
             {deleteTarget && (
                 <div className="admin-modal-overlay" onClick={closeDeleteModal}>
                     <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="admin-modal-header">
                             <h2>
-                                <AlertTriangle size={18} color="#ba1a1a" />
+                                <AlertTriangle size={18} color="var(--admin-danger)" />
                                 Xoá người dùng
                             </h2>
                             <button

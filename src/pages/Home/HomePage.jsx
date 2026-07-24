@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { usePost } from "../../hooks/usePost";
+import { getStockImages } from "../../services/postService";
 import PostDetailModal from "../../components/post/PostDetailModal.jsx";
+import SearchImageModal from "../../components/post/SearchImageModal.jsx";
 
 const HCMC_DISTRICTS = [
   "Tất cả khu vực",
@@ -15,6 +17,7 @@ const formatEventTime = (isoString) => {
     if (!isoString) return "Không rõ thời gian";
     try {
         const date = new Date(isoString);
+        date.setHours(date.getHours() + 7);
         return date.toLocaleDateString('vi-VN', {
             day: '2-digit',
             month: '2-digit',
@@ -39,7 +42,7 @@ function ItemCard({ item, onClick }) {
     return (
         <div onClick={onClick} className="cursor-pointer bg-surface-container-lowest rounded-xl overflow-hidden card-shadow transition-all group flex flex-col justify-between h-full">
                 <div>
-                    <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
+                    <div className="aspect-[4/3] relative overflow-hidden bg-surface-container">
                         <img
                             src={imgUrl}
                             alt={item.title}
@@ -74,31 +77,178 @@ function ItemCard({ item, onClick }) {
 export default function HomePage() {
     const navigate = useNavigate();
     const [selectedPostId, setSelectedPostId] = useState(null);
+    const [isSearchImageOpen, setIsSearchImageOpen] = useState(false);
+    const sidebarDatePickerRef = useRef(null);
+    const mobileDatePickerRef = useRef(null);
+    const postsSectionRef = useRef(null);
     const {
         postsList,
         currentPage,
         totalPages,
         activeType,
         activeDistrict,
+        filterDate,
+        filterTime,
+        filterCategory,
+        filterTag,
         isLoading,
         searchQuery,
         isSearchResult,
+        isImageSearchResult,
         setActiveType,
         setActiveDistrict,
         setCurrentPage,
         setSearchQuery,
+        setFilterDate,
+        setFilterTime,
+        setFilterCategory,
+        setFilterTag,
         fetchPosts,
         executeSearch,
-        clearSearch
+        clearSearch,
+        resetFilters
     } = usePost();
 
+    const [categoriesList, setCategoriesList] = useState([
+        { value: "ALL", label: "Tất cả danh mục" },
+        { value: "DOCS_CARDS", label: "CCCD / CMND / Giấy tờ" },
+        { value: "WALLET", label: "Ví / Bóp tiền" },
+        { value: "ELECTRONICS", label: "Thiết bị điện tử" },
+        { value: "KEYS", label: "Chìa khóa" },
+        { value: "APPAREL_ACC", label: "Quần áo & Phụ kiện" },
+        { value: "BOOKS_STATIONERY", label: "Sách vở & Văn phòng phẩm" },
+        { value: "PETS", label: "Thú cưng" }
+    ]);
+
     useEffect(() => {
+        (async () => {
+            try {
+                const res = await getStockImages();
+                const list = res?.data || res || [];
+                if (Array.isArray(list) && list.length > 0) {
+                    const uniqueCategories = [];
+                    const seen = new Set();
+                    list.forEach(item => {
+                        if (item.category && !seen.has(item.category)) {
+                            seen.add(item.category);
+                            uniqueCategories.push({
+                                value: item.category,
+                                label: item.label || item.category
+                            });
+                        }
+                    });
+                    if (uniqueCategories.length > 0) {
+                        setCategoriesList([
+                            { value: "ALL", label: "Tất cả danh mục" },
+                            ...uniqueCategories
+                        ]);
+                    }
+                }
+            } catch (err) {
+                console.error("Lỗi tải danh mục:", err);
+            }
+        })();
+    }, []);
+
+    const handleDateMaskChange = (e) => {
+        let value = e.target.value;
+        const isDelete = value.length < (filterDate || "").length;
+        if (isDelete) {
+            setFilterDate(value);
+            return;
+        }
+        
+        value = value.replace(/[^\d]/g, ""); // Keep only digits
+        
+        let formatted = "";
+        if (value.length > 0) {
+            formatted += value.substring(0, 2);
+        }
+        if (value.length > 2) {
+            formatted += "/" + value.substring(2, 4);
+        }
+        if (value.length > 4) {
+            formatted += "/" + value.substring(4, 8);
+        }
+        setFilterDate(formatted);
+    };
+
+    useEffect(() => {
+        if (isImageSearchResult) {
+            return; // Maintain image search results static state
+        }
         if (isSearchResult) {
             executeSearch();
         } else {
             fetchPosts();
         }
-    }, [currentPage, activeType, activeDistrict, isSearchResult]);
+    }, [currentPage, activeType, isSearchResult, isImageSearchResult]);
+
+    useEffect(() => {
+        if (isImageSearchResult) {
+            setTimeout(() => {
+                postsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 100);
+        }
+    }, [isImageSearchResult]);
+
+    const getTodayDateString = () => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const getTodayFormatted = () => {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const yyyy = today.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+    };
+
+    const getCurrentTimeString = () => {
+        const today = new Date();
+        const hh = String(today.getHours()).padStart(2, '0');
+        const mm = String(today.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
+    };
+
+    useEffect(() => {
+        if (!filterDate) return;
+        const [d, m, y] = filterDate.split("/");
+        if (!d || !m || !y || y.length < 4) return;
+
+        const today = new Date();
+        const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const selectedDate = new Date(Number(y), Number(m) - 1, Number(d));
+
+        if (selectedDate > todayDateOnly) {
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            setFilterDate(`${dd}/${mm}/${yyyy}`);
+            
+            if (filterTime) {
+                const [hours, minutes] = filterTime.split(":");
+                const selectedDateTime = new Date(Number(yyyy), Number(mm) - 1, Number(dd), Number(hours), Number(minutes));
+                if (selectedDateTime > today) {
+                    const hh = String(today.getHours()).padStart(2, '0');
+                    const min = String(today.getMinutes()).padStart(2, '0');
+                    setFilterTime(`${hh}:${min}`);
+                }
+            }
+        } else if (selectedDate.getTime() === todayDateOnly.getTime() && filterTime) {
+            const [hours, minutes] = filterTime.split(":");
+            const selectedDateTime = new Date(Number(y), Number(m) - 1, Number(d), Number(hours), Number(minutes));
+            if (selectedDateTime > today) {
+                const hh = String(today.getHours()).padStart(2, '0');
+                const min = String(today.getMinutes()).padStart(2, '0');
+                setFilterTime(`${hh}:${min}`);
+            }
+        }
+    }, [filterDate, filterTime]);
 
     const handleSearchSubmit = () => {
         executeSearch();
@@ -134,15 +284,14 @@ export default function HomePage() {
                             <span className="material-symbols-outlined">report_gmailerrorred</span>
                             Đăng bài ngay
                         </button>
-                        <Link to="/search-image" className="inline-block">
-                            <button
-                                type="button"
-                                className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
-                            >
-                                <span className="material-symbols-outlined">search_check</span>
-                                Tìm kiếm với hình ảnh
-                            </button>
-                        </Link>
+                        <button
+                            type="button"
+                            onClick={() => setIsSearchImageOpen(true)}
+                            className="px-8 py-3 bg-surface-container-lowest text-primary font-bold rounded-lg shadow-lg hover:scale-105 transition-transform flex items-center gap-2 cursor-pointer"
+                        >
+                            <span className="material-symbols-outlined">search_check</span>
+                            Tìm kiếm với hình ảnh
+                        </button>
                     </div>
                 </div>
                 <div className="absolute right-0 bottom-0 top-0 w-1/2 hidden md:block opacity-30">
@@ -158,34 +307,159 @@ export default function HomePage() {
             <div className="flex flex-col lg:flex-row gap-stack-lg items-start">
                 {/* Sidebar */}
                 <aside className="hidden lg:flex flex-col w-64 gap-stack-md sticky top-24 shrink-0 text-left">
-                    <div className="p-stack-md bg-surface-container-low rounded-xl">
-                        <div className="mb-stack-md">
-                            <h2 className="text-[20px] font-semibold text-primary">Khu vực</h2>
-                            <p className="text-[14px] text-on-surface-variant">Lọc theo quận huyện</p>
+                    <div className="p-5 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-sm space-y-4">
+                        <div className="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+                            <span className="material-symbols-outlined text-[20px] text-primary">tune</span>
+                            <h2 className="text-[16px] font-bold text-on-surface">Bộ lọc tìm kiếm</h2>
                         </div>
-                        <nav className="flex flex-col gap-1 max-h-[450px] overflow-y-auto pr-1">
-                            {HCMC_DISTRICTS.map((d) => (
+
+                        {/* District Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                                Khu vực
+                            </label>
+                            <select
+                                value={activeDistrict}
+                                onChange={(e) => setActiveDistrict(e.target.value)}
+                                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                            >
+                                {HCMC_DISTRICTS.map((dist) => (
+                                    <option key={dist} value={dist}>
+                                        {dist}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Category Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">category</span>
+                                Danh mục
+                            </label>
+                            <select
+                                value={filterCategory}
+                                onChange={(e) => setFilterCategory(e.target.value)}
+                                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                            >
+                                {categoriesList.map((cat) => (
+                                    <option key={cat.value} value={cat.value}>
+                                        {cat.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Tag Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">tag</span>
+                                Thẻ từ khóa (Tag)
+                            </label>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    placeholder="Nhập tag (ví dụ: ví, cccd...)"
+                                    value={filterTag}
+                                    onChange={(e) => setFilterTag(e.target.value)}
+                                    className="w-full pl-3 pr-8 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold"
+                                />
+                                {filterTag && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterTag('')}
+                                        className="absolute right-2.5 text-outline hover:text-on-surface cursor-pointer"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">close</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Date Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">calendar_today</span>
+                                Ngày {activeType === 'LOST' ? 'mất' : 'nhặt được'}
+                            </label>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="text"
+                                    placeholder="dd/mm/yyyy"
+                                    value={filterDate}
+                                    onChange={handleDateMaskChange}
+                                    className="w-full pl-3 pr-10 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                                />
                                 <button
-                                    key={d}
-                                    onClick={() => setActiveDistrict(d)}
-                                    className={`flex items-center gap-stack-sm rounded-lg px-4 py-2 text-[12px] font-bold tracking-widest transition-colors w-full text-left cursor-pointer ${
-                                        activeDistrict === d
-                                            ? "bg-secondary-container text-on-secondary-container"
-                                            : "text-on-surface-variant hover:bg-surface-container-highest"
-                                    }`}
+                                    type="button"
+                                    onClick={() => sidebarDatePickerRef.current?.showPicker()}
+                                    className="absolute right-3 text-outline hover:text-primary cursor-pointer flex items-center"
                                 >
-                                    <span className="material-symbols-outlined">
-                                        {d === "Tất cả khu vực" ? "map" : "location_on"}
-                                    </span>
-                                    {d}
+                                    <span className="material-symbols-outlined text-[18px]">calendar_month</span>
                                 </button>
-                            ))}
-                        </nav>
+                                <input
+                                    type="date"
+                                    ref={sidebarDatePickerRef}
+                                    max={getTodayDateString()}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val) {
+                                            const [y, m, d] = val.split("-");
+                                            setFilterDate(`${d}/${m}/${y}`);
+                                        }
+                                    }}
+                                    style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        width: 0,
+                                        height: 0,
+                                        opacity: 0,
+                                        pointerEvents: "none"
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Time Field */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-[15px] text-primary">schedule</span>
+                                Giờ (tùy chọn)
+                            </label>
+                            <input
+                                type="time"
+                                value={filterTime}
+                                onChange={(e) => setFilterTime(e.target.value)}
+                                disabled={!filterDate}
+                                max={filterDate === getTodayFormatted() ? getCurrentTimeString() : undefined}
+                                className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[12.5px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold disabled:opacity-50 cursor-pointer"
+                            />
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant/20">
+                            <button
+                                onClick={() => fetchPosts()}
+                                className="w-full py-2 bg-primary text-on-primary font-bold text-[11px] rounded-xl shadow-md hover:opacity-90 transition-all cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">search</span>
+                                Áp dụng
+                            </button>
+                            <button
+                                onClick={resetFilters}
+                                className="w-full py-2 text-[11px] font-bold text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">restart_alt</span>
+                                Xóa bộ lọc
+                            </button>
+                        </div>
                     </div>
                 </aside>
 
                 {/* Content */}
-                <section className="flex-grow w-full">
+                <section ref={postsSectionRef} className="flex-grow w-full">
                     {/* Header with Toggle Filter & Search */}
                     <div className="flex flex-col xl:flex-row justify-between items-stretch xl:items-center gap-4 mb-stack-md pb-4 border-b border-outline-variant/30">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-grow">
@@ -216,13 +490,13 @@ export default function HomePage() {
                                         </button>
                                     )}
                                 </div>
-                                <Link
-                                    to="/search-image"
+                                <button
+                                    onClick={() => setIsSearchImageOpen(true)}
                                     title="Tìm kiếm bằng hình ảnh (AI)"
                                     className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shrink-0 border border-primary/20"
                                 >
                                     <span className="material-symbols-outlined text-[20px]">photo_camera</span>
-                                </Link>
+                                </button>
                             </div>
                         </div>
                         {/* Type Filter Tabs */}
@@ -250,11 +524,173 @@ export default function HomePage() {
                         </div>
                     </div>
 
+                    {/* Filter Card (Mobile only) */}
+                    <div className="lg:hidden bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 md:p-6 mb-6 shadow-sm text-left">
+                        <h3 className="text-[13px] font-bold text-primary uppercase tracking-wider mb-4 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[18px]">tune</span>
+                            Bộ lọc tìm kiếm
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                            {/* District Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">location_on</span>
+                                    Khu vực
+                                </label>
+                                <select
+                                    value={activeDistrict}
+                                    onChange={(e) => setActiveDistrict(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                                >
+                                    {HCMC_DISTRICTS.map((dist) => (
+                                        <option key={dist} value={dist}>
+                                            {dist}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Category Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">category</span>
+                                    Danh mục
+                                </label>
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                                >
+                                    {categoriesList.map((cat) => (
+                                        <option key={cat.value} value={cat.value}>
+                                            {cat.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Tag Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">tag</span>
+                                    Thẻ từ khóa (Tag)
+                                </label>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập tag (ví dụ: ví, cccd...)"
+                                        value={filterTag}
+                                        onChange={(e) => setFilterTag(e.target.value)}
+                                        className="w-full pl-3.5 pr-8 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold"
+                                    />
+                                    {filterTag && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFilterTag('')}
+                                            className="absolute right-3 text-outline hover:text-on-surface cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">close</span>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Date Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">calendar_today</span>
+                                    Ngày {activeType === 'LOST' ? 'mất' : 'nhặt được'}
+                                </label>
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="text"
+                                        placeholder="dd/mm/yyyy"
+                                        value={filterDate}
+                                        onChange={handleDateMaskChange}
+                                        className="w-full pl-3.5 pr-10 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold cursor-pointer"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => mobileDatePickerRef.current?.showPicker()}
+                                        className="absolute right-3 text-outline hover:text-primary cursor-pointer flex items-center"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                                    </button>
+                                    <input
+                                        type="date"
+                                        ref={mobileDatePickerRef}
+                                        max={getTodayDateString()}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val) {
+                                                const [y, m, d] = val.split("-");
+                                                setFilterDate(`${d}/${m}/${y}`);
+                                            }
+                                        }}
+                                        style={{
+                                            position: "absolute",
+                                            top: 0,
+                                            left: 0,
+                                            width: 0,
+                                            height: 0,
+                                            opacity: 0,
+                                            pointerEvents: "none"
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Time Field */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-bold text-on-surface-variant flex items-center gap-1 uppercase tracking-wider">
+                                    <span className="material-symbols-outlined text-[15px] text-primary">schedule</span>
+                                    Giờ (tùy chọn)
+                                </label>
+                                <input
+                                    type="time"
+                                    value={filterTime}
+                                    onChange={(e) => setFilterTime(e.target.value)}
+                                    disabled={!filterDate}
+                                    max={filterDate === getTodayFormatted() ? getCurrentTimeString() : undefined}
+                                    placeholder="HH:mm"
+                                    className="w-full px-3.5 py-2.5 bg-surface-container-low border border-outline-variant/30 rounded-xl text-[13px] outline-none focus:ring-2 focus:ring-primary text-on-surface font-semibold disabled:opacity-50 cursor-pointer"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-outline-variant/20">
+                            <button
+                                onClick={resetFilters}
+                                className="px-4 py-2 text-[11px] font-bold text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-all cursor-pointer inline-flex items-center gap-1"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">restart_alt</span>
+                                Xóa bộ lọc
+                            </button>
+                            <button
+                                onClick={() => fetchPosts()}
+                                className="px-6 py-2.5 bg-primary text-on-primary font-bold text-[11px] rounded-xl shadow-md hover:opacity-90 transition-all cursor-pointer inline-flex items-center gap-1.5 uppercase tracking-wider"
+                            >
+                                <span className="material-symbols-outlined text-[15px]">search</span>
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+
                     {/* Search Info Label (Moved below header & filters) */}
                     {isSearchResult && (
-                        <div className="flex items-center gap-2 mb-6 p-4 bg-primary/5 rounded-xl border border-primary/10 text-[13px] font-bold text-primary text-left">
-                            <span className="material-symbols-outlined text-[18px]">info</span>
-                            <span>Đây là kết quả phù hợp nhất với tìm kiếm của bạn</span>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 p-4 bg-primary/5 rounded-xl border border-primary/10 text-[13px] font-bold text-primary text-left">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[18px]">info</span>
+                                <span>Đây là kết quả phù hợp nhất với tìm kiếm của bạn</span>
+                            </div>
+                            <button
+                                onClick={handleClearSearch}
+                                className="px-3.5 py-1.5 bg-primary text-white text-[11px] font-bold rounded-lg hover:opacity-90 transition-all cursor-pointer inline-flex items-center gap-1 shrink-0 uppercase tracking-wider"
+                            >
+                                <span className="material-symbols-outlined text-[14px]">refresh</span>
+                                Quay lại danh sách
+                            </button>
                         </div>
                     )}
 
@@ -328,6 +764,11 @@ export default function HomePage() {
                     postId={selectedPostId}
                     onClose={() => setSelectedPostId(null)}
                     onActionComplete={isSearchResult ? executeSearch : fetchPosts}
+                />
+            )}
+            {isSearchImageOpen && (
+                <SearchImageModal
+                    onClose={() => setIsSearchImageOpen(false)}
                 />
             )}
         </main>
