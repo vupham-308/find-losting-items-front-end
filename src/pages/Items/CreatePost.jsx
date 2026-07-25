@@ -316,13 +316,17 @@ export default function CreatePost() {
 
     useEffect(() => {
         if (suggestedQuestions && suggestedQuestions.length > 0) {
-            setVerificationsList(
-                suggestedQuestions.map(q => ({
-                    title: q.title || q.question || '',
-                    correctAnswer: q.correctAnswer || q.answer || '',
-                    importantPoint: q.importantPoint !== undefined ? q.importantPoint : (q.important_point !== undefined ? q.important_point : 1)
-                }))
-            );
+            const aiItems = suggestedQuestions.map(q => ({
+                title: q.title || q.question || '',
+                correctAnswer: q.correctAnswer || q.answer || '',
+                importantPoint: q.importantPoint !== undefined ? q.importantPoint : (q.important_point !== undefined ? q.important_point : 1)
+            }));
+
+            setVerificationsList(prev => {
+                const existingTitles = new Set(prev.map(item => item.title.trim().toLowerCase()).filter(Boolean));
+                const newAiItems = aiItems.filter(item => !existingTitles.has(item.title.trim().toLowerCase()));
+                return [...prev, ...newAiItems];
+            });
         }
     }, [suggestedQuestions]);
 
@@ -999,18 +1003,31 @@ export default function CreatePost() {
                       <p className="text-[12px] text-on-surface-variant mt-0.5">Người nhận đồ sẽ phải trả lời đúng các câu hỏi này.</p>
                     </div>
                     {isGeneratingQuestions && (
-                      <span className="text-[12px] text-primary flex items-center gap-1 animate-pulse">
-                        <span className="material-symbols-outlined text-[14px]">progress_activity</span>
+                      <span className="text-[12px] text-primary font-bold flex items-center gap-1.5 bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                        <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
                         Đang gợi ý...
                       </span>
                     )}
                   </div>
 
+                  {/* Top Loading Banner if AI is generating in background */}
+                  {isGeneratingQuestions && (
+                    <div className="py-3 px-4 bg-primary/5 rounded-xl border border-primary/20 flex items-center justify-between gap-3 animate-pulse mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-primary text-[20px] animate-spin">progress_activity</span>
+                        <div>
+                          <p className="text-primary font-bold text-xs">AI đang tự động tạo câu hỏi từ hình ảnh...</p>
+                          <p className="text-on-surface-variant/70 text-[11px]">Bạn vẫn có thể tự do nhập hoặc thêm câu hỏi bên dưới</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {verificationsList.length === 0 ? (
                     <div className="text-center py-6 bg-surface-container rounded-xl border border-dashed border-outline-variant">
-                      <p className="text-on-surface-variant text-sm mb-3">Chưa có câu hỏi nào. Tải ảnh lên để AI gợi ý tự động.</p>
+                      <p className="text-on-surface-variant text-sm mb-3">Chưa có câu hỏi nào. Tải ảnh lên để AI gợi ý tự động hoặc bấm bên dưới để tạo thủ công.</p>
                       <button type="button" onClick={handleAddQuestion}
-                        className="px-5 py-2 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition-all text-sm">
+                        className="px-5 py-2 bg-primary text-white rounded-lg font-bold hover:opacity-90 transition-all text-sm cursor-pointer">
                         + Tạo câu hỏi thủ công
                       </button>
                     </div>
