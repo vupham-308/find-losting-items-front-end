@@ -29,6 +29,79 @@ const matchDistrict = (extracted) => {
     return matched || '';
 };
 
+const extractAndMatchDistrict = (item) => {
+    if (!item) return '';
+    const address = item.address || {};
+
+    // 1. Check direct fields from OpenStreetMap Nominatim address object
+    const candidates = [
+        address.district,
+        address.city_district,
+        address.county,
+        address.suburb,
+        address.town,
+        address.quarter
+    ].filter(Boolean);
+
+    for (const cand of candidates) {
+        const matched = matchDistrict(cand);
+        if (matched) return matched;
+    }
+
+    // 2. Fallback: Parse display_name full address string
+    if (item.display_name) {
+        const displayName = item.display_name;
+        for (const dist of HCMC_DISTRICTS) {
+            if (dist === "Thành phố Thủ Đức" && (displayName.includes("Thủ Đức") || displayName.includes("Quận 2") || displayName.includes("Quận 9"))) {
+                return "Thành phố Thủ Đức";
+            }
+            const cleanD = dist.toLowerCase().replace(/huyện|quận|thành phố|tp\.|tp/g, '').trim();
+            const regex = new RegExp(`(?:quận|huyện|q\\.|q)\\s*${cleanD}\\b`, 'i');
+            if (regex.test(displayName) || displayName.toLowerCase().includes(dist.toLowerCase())) {
+                return dist;
+            }
+        }
+    }
+
+    return '';
+};
+
+const extractMatchesArray = (res) => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.matches)) return res.matches;
+    if (Array.isArray(res.results)) return res.results;
+    if (Array.isArray(res.match)) return res.match;
+    if (res.data) {
+        if (Array.isArray(res.data)) return res.data;
+        if (Array.isArray(res.data.matches)) return res.data.matches;
+        if (Array.isArray(res.data.results)) return res.data.results;
+        if (Array.isArray(res.data.match)) return res.data.match;
+    }
+    return [];
+};
+
+const getScorePercent = (item) => {
+    if (!item) return 0;
+
+    if (item.human_score) {
+        const parsed = parseFloat(String(item.human_score).replace('%', '').trim());
+        if (!isNaN(parsed)) {
+            return parsed <= 1 ? parsed * 100 : parsed;
+        }
+    }
+
+    const rawVal = item.match_score ?? item.score ?? item.confidence ?? item.similarity ?? item.matchScore ?? item.similarity_score;
+    if (rawVal !== undefined && rawVal !== null) {
+        const num = parseFloat(String(rawVal).replace('%', '').trim());
+        if (!isNaN(num)) {
+            return num <= 1 ? num * 100 : num;
+        }
+    }
+
+    return 0;
+};
+
 export default function CreatePost() {
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -336,7 +409,6 @@ export default function CreatePost() {
 
   const handleSelectSuggestion = (item) => {
     const addressDetails = item.address || {};
-    const district = addressDetails.city_district || addressDetails.county || addressDetails.suburb || "";
     
     const hasDetail = !!(addressDetails.road || addressDetails.house_number || addressDetails.building || addressDetails.amenity || addressDetails.shop || addressDetails.tourism || addressDetails.leisure || addressDetails.highway);
     
@@ -344,28 +416,15 @@ export default function CreatePost() {
     if (!hasDetail && addressDetails.suburb) {
       level = 8;
     }
-    
+
     setSelectedLocation({
       address: item.display_name,
-      district: district,
       latitude: parseFloat(item.lat),
       longitude: parseFloat(item.lon),
       locationLevel: level
     });
     
     setLocationQuery(item.display_name);
-
-    // Auto extract and match the district from Nominatim suggestions
-    const matched = matchDistrict(district);
-    if (matched) {
-      setSelectedDistrict(matched);
-    } else if (district) {
-      const cleaned = district.toLowerCase();
-      const found = HCMC_DISTRICTS.find(d => cleaned.includes(d.toLowerCase().replace(/huyện|quận|thành phố|tp\.|tp/g, '').trim()));
-      if (found) {
-        setSelectedDistrict(found);
-      }
-    }
     setSuggestions([]);
   };
 
@@ -552,15 +611,8 @@ export default function CreatePost() {
             
             console.log("Kết quả từ server:", result);
 
-            const rawMatches = result?.matches || result?.data?.matches || result?.match || [];
-            const filteredMatches = rawMatches.filter(item => {
-                const scoreVal = item.match_score ?? item.score ?? item.confidence ?? item.similarity;
-                if (scoreVal === undefined || scoreVal === null) return false;
-                const scoreNum = Number(scoreVal);
-                if (isNaN(scoreNum)) return false;
-                const scorePercent = scoreNum <= 1 ? scoreNum * 100 : scoreNum;
-                return scorePercent >= 50;
-            });
+            const rawMatches = extractMatchesArray(result);
+            const filteredMatches = rawMatches.filter(item => getScorePercent(item) >= 50);
 
             if (filteredMatches && filteredMatches.length > 0) {
                 setNotification({ message: 'Đăng tin thành công! Đang đối chiếu các tin tương đồng...', type: 'success' });
@@ -1201,7 +1253,7 @@ export default function CreatePost() {
                       {/* Score & Link button */}
                       <div className="flex justify-between items-end mt-1">
                         <span className="text-[10px] font-bold text-primary">
-                          Khớp: {match.human_score || `${(match.score * 100).toFixed(2)}%`}
+                          Khớp: {match.human_score || `${getScorePercent(match).toFixed(2)}%`}
                         </span>
                         <button
                           type="button"

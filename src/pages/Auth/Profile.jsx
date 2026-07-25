@@ -15,6 +15,7 @@ export default function ProfilePage() {
 
     // Dashboard active tab
     const [activeTab, setActiveTab] = useState("info")
+    const [deleteConfirmPostId, setDeleteConfirmPostId] = useState(null)
 
     // Change password flow state (via OTP, giống flow quên mật khẩu)
     const CHANGE_STEPS = { IDLE: "idle", OTP: "otp", SUCCESS: "success" }
@@ -158,20 +159,20 @@ export default function ProfilePage() {
         }
     }
 
-    const handleDeletePost = async (postId) => {
-        if (!window.confirm("Bạn có chắc chắn muốn xóa bài đăng này không? Hành động này không thể hoàn tác.")) {
-            return;
-        }
-        setDeletingPostId(postId)
+    const handleConfirmDeletePost = async () => {
+        if (!deleteConfirmPostId) return;
+        setDeletingPostId(deleteConfirmPostId);
         try {
-            await postService.deletePost(postId)
-            setRefreshTrigger(prev => prev + 1)
+            await postService.deletePost(deleteConfirmPostId);
+            setRefreshTrigger(prev => prev + 1);
+            setDeleteConfirmPostId(null);
         } catch (err) {
-            alert(err.message || "Không thể xóa bài đăng")
+            setDeleteConfirmPostId(null);
+            alert(err.message || "Không thể xóa bài đăng");
         } finally {
-            setDeletingPostId(null)
+            setDeletingPostId(null);
         }
-    }
+    };
 
     // Password validation
     const passwordChecks = [
@@ -1112,7 +1113,7 @@ export default function ProfilePage() {
                                                             disabled={deletingPostId === post.id}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDeletePost(post.id);
+                                                                setDeleteConfirmPostId(post.id);
                                                             }}
                                                             className="w-8 h-8 border border-red-200 hover:bg-red-50 hover:text-red-700 rounded-lg text-red-600 transition-colors cursor-pointer flex items-center justify-center disabled:opacity-50"
                                                             title="Xóa bài viết"
@@ -1169,6 +1170,50 @@ export default function ProfilePage() {
                     onClose={() => setSelectedPostId(null)}
                     onActionComplete={() => setRefreshTrigger((prev) => prev + 1)}
                 />
+            )}
+
+            {/* Custom Confirm Delete System Modal */}
+            {deleteConfirmPostId && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+                    <div className="bg-surface rounded-2xl border border-outline-variant shadow-2xl max-w-[420px] w-full p-6 text-center space-y-4 animate-in fade-in zoom-in duration-150 relative">
+                        <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto border border-red-500/20">
+                            <span className="material-symbols-outlined text-[32px]">delete_forever</span>
+                        </div>
+                        
+                        <div className="space-y-1">
+                            <h3 className="font-bold text-lg text-on-surface">Xác nhận xóa bài đăng</h3>
+                            <p className="text-sm text-on-surface-variant font-medium leading-relaxed">
+                                Bạn có chắc chắn muốn XÓA bài đăng này không? Hành động này không thể hoàn tác.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-2">
+                            <button
+                                type="button"
+                                disabled={deletingPostId !== null}
+                                onClick={() => setDeleteConfirmPostId(null)}
+                                className="flex-1 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-bold text-sm rounded-xl transition-all cursor-pointer disabled:opacity-50"
+                            >
+                                Hủy bỏ
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deletingPostId !== null}
+                                onClick={handleConfirmDeletePost}
+                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                            >
+                                {deletingPostId !== null ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                                        <span>Đang xóa...</span>
+                                    </>
+                                ) : (
+                                    <span>Xác nhận xóa</span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )
